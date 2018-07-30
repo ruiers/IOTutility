@@ -1,13 +1,13 @@
 CC = gcc
 
 INC_PATH ?= inc/
-CFLAGS = -std=c89
+CFLAGS = -std=c99
 
 OSTYPE = $(shell uname)
 ifneq (${OSTYPE}, Linux)
 CFLAGS += -DHOLYBSD
 else
-CFLAGS += -DOS_LINUX
+CFLAGS += -DOS_LINUX -DFN_DEBUG
 endif
 
 LIB_PTHREAD = -lpthread
