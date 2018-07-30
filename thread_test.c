@@ -3,18 +3,22 @@
 #include <stdlib.h>
 #include "inc/base.h"
 
+ 
 sem_t_id ready;
 
 void* thread()
 {
+    taskSetName("THREAD1");
     while (1)
     {
+		
         semTake(ready, -1);
         printf("print from %s\n", __func__);
     }
 }
 void main()
 {
+    taskSetName("MainThread");
     ready = semCreate(0);
 
     printf("test start\n");

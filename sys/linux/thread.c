@@ -19,63 +19,63 @@ int taskCreate(void* (*fun)(void *), void *arg)
     return 0;
 }
 
-sem_t_id semCreate(int _value)
+sem_t_id semCreate(int value_init)
 {
-    sem_t_id _sem_t;
-    _sem_t = (sem_t_id)malloc(sizeof(sem_t));
-    if (sem_init(_sem_t, 0, _value) < 0)
+    sem_t_id id_sem_t;
+    id_sem_t = (sem_t_id)malloc(sizeof(sem_t));
+    if (sem_init(id_sem_t, 0, value_init) < 0)
     {
-        free((void *)_sem_t);
+        free((void *)id_sem_t);
         return NULL;
     }
-    return _sem_t;
+    return id_sem_t;
 }
 
-int semTake(sem_t_id _sem, int _ms)
+int semTake(sem_t_id id_sem, int ms_time)
 {
 
     struct timespec timeout;
 
-    if (-1 == _ms)
+    if (-1 == ms_time)
     {
-        if (sem_wait(_sem) < 0) return -1;
+        if (sem_wait(id_sem) < 0) return -1;
         else return 0;
     }
 
-    timeout.tv_sec  = time(NULL) + _ms / 1000;
+    timeout.tv_sec  = time(NULL) + ms_time / 1000;
     timeout.tv_nsec = 0;
 
-    if (_ms % 1000) timeout.tv_sec++;
-    if (sem_timedwait(_sem, &timeout) < 0) return -1;
+    if (ms_time % 1000) timeout.tv_sec++;
+    if (sem_timedwait(id_sem, &timeout) < 0) return -1;
     else return 0;
 }
-int semGive(sem_t_id _sem)
+int semGive(sem_t_id id_sem)
 {
-    if (sem_post(_sem) < 0) return -1;
+    if (sem_post(id_sem) < 0) return -1;
     else return 0;
 }
 
 mux_t_id muxCreate()
 {
-    mux_t_id _mux_t;
-    _mux_t = (mux_t_id)malloc(sizeof(mux_t));
-    if (pthread_mutex_init(_mux_t, NULL) == -1)
+    mux_t_id id_mux_t;
+    id_mux_t = (mux_t_id)malloc(sizeof(mux_t));
+    if (pthread_mutex_init(id_mux_t, NULL) == -1)
     {
-        free((void *)_mux_t);
+        free((void *)id_mux_t);
         return NULL;
     }
-    return _mux_t;
+    return id_mux_t;
 }
 
-int muxLock(mux_t_id _mux)
+int muxLock(mux_t_id id_mux)
 {
-    if (pthread_mutex_lock(_mux) < 0) return -1;
+    if (pthread_mutex_lock(id_mux) < 0) return -1;
     else return 0;
 }
 
-int muxUnlock(mux_t_id _mux)
+int muxUnlock(mux_t_id id_mux)
 {
-    if (pthread_mutex_unlock(_mux) < 0) return -1;
+    if (pthread_mutex_unlock(id_mux) < 0) return -1;
     else return 0;
 
 }
