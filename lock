@@ -1,0 +1,6 @@
+find . -name "*.c" | xargs  astyle --style=allman
+find . -name "*.h" | xargs  astyle --style=allman
+find . -name "*.c" | xargs dos2unix
+find . -name "*.h" | xargs dos2unix
+
+dos2unix Makefile
