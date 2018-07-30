@@ -7,6 +7,10 @@
 
 sem_t_id ready;
 
+void* udpDataHandle(char* data, int len)
+{
+    log_dbg("%d:%s\n", len, data);
+}
 void* thread()
 {
     taskSetName("THREAD1");
@@ -25,6 +29,11 @@ void main()
     log_err("test start\n");
 
     taskCreate(thread, NULL);
+
+    udpServer* uSvr = malloc(sizeof(udpServer));
+    uSvr->port = 5055;
+    uSvr->call_back = udpDataHandle;
+    udpServerThreadStart(uSvr);
 
     while (1)
     {
