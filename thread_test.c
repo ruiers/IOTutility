@@ -12,6 +12,12 @@ void* udpDataHandle(char* data, int len)
     log_dbg("%d:%s\n", len, data);
     semGive(ready);
 }
+
+void* tcpDataHandle(char* data, int len)
+{
+    log_dbg("%d:%s\n", len, data);
+}
+
 void* thread(udpServer* uSvr)
 {
     taskSetName("THREAD1");
@@ -36,6 +42,13 @@ void main()
     udpServerThreadStart(uSvr);
     taskCreate((void *) thread, uSvr);
 
+    tcpClient* tcpClt = malloc(sizeof(tcpClient));
+    strcpy(tcpClt->ip_str, "10.56.56.236");
+    tcpClt->port = 5057;
+    tcpClt->call_back = tcpDataHandle;
+    tcpThreadConnect(tcpClt);
+    log_dbg("tcp connect %d", tcpClt->connected);
+
     while (cmd = getchar())
     {
         switch (cmd)
@@ -47,6 +60,7 @@ void main()
             break;
         }
         log_ver("cmd = %x\n", cmd);
+        tcpSendToServer(tcpClt, "cmd", 3);
     }
     return;
 }

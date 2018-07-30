@@ -16,3 +16,15 @@ typedef struct udp_server
 int udpServerStart(udpServer* udpSvr);
 int udpServerThreadStart(udpServer* udpSvr);
 int udpSendto(char *destIP, int destPort, char *data, int len);
+
+typedef struct tcp_client
+{
+    char  ip_str[12];
+    int   port;
+    int   fd;
+    int   connected;
+    void* (*call_back) (char *p_data, int length);
+} tcpClient;
+
+int tcpThreadConnect(tcpClient* tcpClt);
+int tcpSendToServer(tcpClient* tcpClt, char* p_send_buf, int n_recv_len);

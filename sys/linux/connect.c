@@ -79,11 +79,72 @@ int udpSendto(char *destIP, int destPort, char *data, int len)
 
     if (sendto(sockFd, (caddr_t)data, len, 0, (struct sockaddr *)&destAddr, sizeof(destAddr)) == -1)
     {
-        printf("socket send err!\n");
+        printf("udp sendto %s @ %d failed!\n", destIP, destPort);
+        perror("");
         close(sockFd);
         return -1;
     }
 
     close(sockFd);
     return 0;
+}
+
+int recvFromServer(tcpClient* tcpClt, char* p_recv_buf, int n_recv_len)
+{
+    return read(tcpClt->fd, p_recv_buf, n_recv_len);
+}
+
+int tcpSendToServer(tcpClient* tcpClt, char* p_send_buf, int n_recv_len)
+{
+    if (tcpClt->connected)
+        return write(tcpClt->fd, p_send_buf, n_recv_len);
+    else
+        return 0;
+}
+
+void tcpConnectToServer(tcpClient* tcpClt)
+{
+    struct sockaddr_in serverAddr;
+    tcpClt->fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    serverAddr.sin_family = AF_INET;
+    inet_pton(AF_INET, tcpClt->ip_str, &serverAddr.sin_addr);
+    serverAddr.sin_port = htons(tcpClt->port);
+
+    if (0 == connect(tcpClt->fd, (struct sockaddr *)&serverAddr, sizeof(serverAddr)))
+        tcpClt->connected = 1;
+    else
+    {
+        tcpClt->connected = 0;
+        printf("%s: connect to %s at %d failed\n", __func__, tcpClt->ip_str, tcpClt->port);
+        perror("");
+        close(tcpClt->fd);
+    }
+
+}
+
+void tcpPullFromServer(tcpClient* tcpClt)
+{
+    char p_recv_buff[1024];
+    int  n_recv_len = 0;
+
+    while (1)
+    {
+        n_recv_len = recvFromServer(tcpClt, p_recv_buff, 1024);
+
+        if (n_recv_len > 0 && tcpClt->call_back != NULL)
+            tcpClt->call_back(p_recv_buff, n_recv_len);
+        else
+        {
+            tcpClt->connected = 0;
+            close(tcpClt->fd);
+            break;
+        }
+    }
+}
+
+int tcpThreadConnect(tcpClient* tcpClt)
+{
+    tcpConnectToServer(tcpClt);
+    taskCreate((void *)tcpPullFromServer, tcpClt);
 }
