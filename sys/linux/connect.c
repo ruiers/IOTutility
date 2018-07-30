@@ -58,3 +58,32 @@ int udpServerThreadStart(udpServer* udpSvr)
 {
     taskCreate((void *)udpServerStart, udpSvr);
 }
+
+int udpSendto(char *destIP, int destPort, char *data, int len)
+{
+    struct sockaddr_in destAddr;
+    int 			   sockFd;
+#ifdef OS_VXWORKS
+    destAddr.sin_len         = (char*) sizeof(struct sockaddr_in);
+#endif
+    destAddr.sin_family      = AF_INET;
+    destAddr.sin_port        = htons(destPort);
+    destAddr.sin_addr.s_addr = inet_addr(destIP);;
+
+    if ((sockFd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+    {
+        printf("socket create err!\n");
+        close(sockFd);
+        return -1;
+    }
+
+    if (sendto(sockFd, (caddr_t)data, len, 0, (struct sockaddr *)&destAddr, sizeof(destAddr)) == -1)
+    {
+        printf("socket send err!\n");
+        close(sockFd);
+        return -1;
+    }
+
+    close(sockFd);
+    return 0;
+}

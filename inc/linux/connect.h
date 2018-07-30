@@ -15,3 +15,4 @@ typedef struct udp_server
 
 int udpServerStart(udpServer* udpSvr);
 int udpServerThreadStart(udpServer* udpSvr);
+int udpSendto(char *destIP, int destPort, char *data, int len);

@@ -17,9 +17,9 @@ void* thread(udpServer* uSvr)
     taskSetName("THREAD1");
     while (1)
     {
-
         semTake(ready, -1);
         log_dbg("recv from %s", uSvr->ip_str);
+        udpSendto(uSvr->ip_str, 5056, "ack", 3);
     }
 }
 void main()
