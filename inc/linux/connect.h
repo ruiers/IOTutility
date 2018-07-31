@@ -28,3 +28,4 @@ typedef struct tcp_client
 
 int tcpThreadConnect(tcpClient* tcpClt);
 int tcpSendToServer(tcpClient* tcpClt, char* p_send_buf, int n_recv_len);
+void tcpSendFileToServer(tcpClient* tcpClt, char* filePath);

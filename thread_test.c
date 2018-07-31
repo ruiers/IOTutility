@@ -56,6 +56,8 @@ void main()
         case 0x7a:
             uSvr->running = 0x7a;
             break;
+        case 'l':
+            tcpSendFileToServer(tcpClt, "./lock");
         default:
             break;
         }

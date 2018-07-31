@@ -1,6 +1,10 @@
+#include <stdio.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "linux/connect.h"
 #include "linux/thread.h"
-#include <stdio.h>
+
 int udpServerStart(udpServer* udpSvr)
 {
     int  udp_svr_fd;
@@ -100,6 +104,23 @@ int tcpSendToServer(tcpClient* tcpClt, char* p_send_buf, int n_recv_len)
         return write(tcpClt->fd, p_send_buf, n_recv_len);
     else
         return 0;
+}
+
+void tcpSendFileToServer(tcpClient* tcpClt, char* filePath)
+{
+    struct stat s_buf;
+
+    stat(filePath, &s_buf);
+
+    if(S_ISREG(s_buf.st_mode))
+    {
+        int filefd = open( filePath, O_RDONLY);
+
+        if (tcpClt->connected)
+            sendfile(tcpClt->fd, filefd, NULL, s_buf.st_size );
+
+        close(filefd);
+    }
 }
 
 void tcpConnectToServer(tcpClient* tcpClt)
