@@ -1,6 +1,7 @@
 #ifdef OS_LINUX
 #include "./linux/thread.h"
 #include "./linux/connect.h"
+#include "./linux/cache.h"
 #endif
 
 #ifdef FN_DEBUG

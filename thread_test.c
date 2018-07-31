@@ -49,8 +49,12 @@ void main()
     tcpThreadConnect(tcpClt);
     log_dbg("tcp connect %d", tcpClt->connected);
 
+    CacheList clh = MemoryCacheCreate(5,10);
+    int id = 0;
     while (cmd = getchar())
     {
+        MemoryCache* mc_insert, * mc_first ;
+
         if (cmd == 'Z')
             break;
         switch (cmd)
@@ -60,11 +64,25 @@ void main()
             break;
         case 'l':
             tcpSendFileToServer(tcpClt, "./lock");
+            break;
+        case 'a':
+            mc_insert = MemoryCacheAlloc(clh, id++);
+            break;
+        case 'd':
+            MemoryCacheFree(clh, MemoryCacheGet(clh));
+            break;
         default:
             break;
         }
         log_ver("cmd = %x\n", cmd);
         tcpSendToServer(tcpClt, "cmd", 3);
+
+        mc_first = MemoryCacheGet(clh);
+        while(mc_first != NULL)
+        {
+            log_dbg("cache %d", mc_first->cache_size);
+            mc_first = STAILQ_NEXT(mc_first, nodes);
+        }
     }
     return;
 }

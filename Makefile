@@ -20,6 +20,9 @@ SRC_THREAD = sys/linux/thread.c
 OBJ_CONNECT = connect.o
 SRC_CONNECT = sys/linux/connect.c
 
+OBJ_CACHE = cache.o
+SRC_CACHE = sys/linux/cache.c
+
 BIN_THREAD_TEST = thread_test.bin
 OBJ_THREAD_TEST = thread_test.o
 
@@ -30,9 +33,12 @@ $(OBJ_THREAD):
 
 $(OBJ_CONNECT): 
 	$(CC) -c $(SRC_CONNECT) -I$(INC_PATH) $(LIBS_LD)
-	
-$(BIN_THREAD_TEST): $(OBJ_THREAD_TEST) $(OBJ_THREAD) $(OBJ_CONNECT)
-	$(CC) -o $(BIN_THREAD_TEST) $(OBJ_THREAD_TEST) $(OBJ_THREAD) $(OBJ_CONNECT) $(LIBS_LD) 
+
+$(OBJ_CACHE): 
+	$(CC) -c $(SRC_CACHE) -I$(INC_PATH) $(LIBS_LD)
+
+$(BIN_THREAD_TEST): $(OBJ_THREAD_TEST) $(OBJ_THREAD) $(OBJ_CONNECT) $(OBJ_CACHE)
+	$(CC) -o $(BIN_THREAD_TEST) $(OBJ_THREAD_TEST) $(OBJ_THREAD) $(OBJ_CONNECT) $(OBJ_CACHE) $(LIBS_LD) 
 
 clean:
 	rm *.o 
