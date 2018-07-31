@@ -13,6 +13,7 @@ struct memory_cache
 typedef struct cache_list_head* CacheList;
 typedef struct memory_cache MemoryCache;
 CacheList MemoryCacheCreate(int size, int count);
+void MemoryCacheReset(CacheList clh);
 MemoryCache* MemoryCacheAlloc(CacheList clh, int size);
 void MemoryCacheFree(CacheList clh, MemoryCache* mc_free);
 MemoryCache* MemoryCacheGet(CacheList clh);

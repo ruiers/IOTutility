@@ -24,6 +24,20 @@ CacheList MemoryCacheCreate(int size, int count)
     return p_cache_head;
 }
 
+void MemoryCacheReset(CacheList clh)
+{
+    while (!STAILQ_EMPTY(clh))
+    {
+        MemoryCache* mc_remove = STAILQ_FIRST(clh);
+        STAILQ_REMOVE_HEAD(clh, nodes);
+        free(mc_remove);
+    }
+
+    memset(mem_pool, 0x0, max_size);
+    mem_size = 0;
+    cache_count = 0;
+}
+
 void MemoryCacheDestroy(CacheList clh)
 {
     while (!STAILQ_EMPTY(clh))
@@ -34,7 +48,6 @@ void MemoryCacheDestroy(CacheList clh)
     }
 
     free(mem_pool);
-
 }
 
 MemoryCache* MemoryCacheAlloc(CacheList clh, int size)
@@ -67,6 +80,7 @@ void MemoryCacheFree(CacheList clh, MemoryCache* mc_free)
         return;
 
     STAILQ_REMOVE(&cache_head, mc_free, memory_cache, nodes);
+    cache_count--;
     free(mc_free);
 }
 

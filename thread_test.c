@@ -49,7 +49,7 @@ void main()
     tcpThreadConnect(tcpClt);
     log_dbg("tcp connect %d", tcpClt->connected);
 
-    CacheList clh = MemoryCacheCreate(5,10);
+    CacheList clh = MemoryCacheCreate(100,10);
     int id = 0;
     while (cmd = getchar())
     {
@@ -70,6 +70,10 @@ void main()
             break;
         case 'd':
             MemoryCacheFree(clh, MemoryCacheGet(clh));
+            break;
+        case 'r':
+            MemoryCacheReset(clh);
+            id = 0;
             break;
         default:
             break;
