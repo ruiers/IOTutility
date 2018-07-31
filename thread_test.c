@@ -51,6 +51,8 @@ void main()
 
     while (cmd = getchar())
     {
+        if (cmd == 'Z')
+            break;
         switch (cmd)
         {
         case 0x7a:
