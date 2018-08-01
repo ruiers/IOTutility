@@ -66,7 +66,13 @@ void main()
             tcpSendFileToServer(tcpClt, "./lock");
             break;
         case 'a':
-            mc_insert = MemoryCacheAlloc(clh, id++);
+            mc_insert = MemoryCacheAlloc(clh);
+
+            if (mc_insert != NULL)
+            {
+                mc_insert->cache_size = id++;
+                *(mc_insert->cache_addr) = 'a' + id;
+            }
             break;
         case 'd':
             MemoryCacheFree(clh, MemoryCacheGet(clh));
@@ -84,7 +90,7 @@ void main()
         mc_first = MemoryCacheGet(clh);
         while(mc_first != NULL)
         {
-            log_dbg("cache %d", mc_first->cache_size);
+            log_dbg("cache %d, %c, %p", mc_first->cache_size, *(mc_first->cache_addr), mc_first->cache_addr);
             mc_first = STAILQ_NEXT(mc_first, nodes);
         }
     }
