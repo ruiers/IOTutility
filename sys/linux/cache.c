@@ -90,3 +90,23 @@ MemoryCache* MemoryCacheGet(CacheList clh)
     return STAILQ_FIRST(&cache_head);
 }
 
+MemoryCache* MemoryCacheNext(MemoryCache* cache)
+{
+    return STAILQ_NEXT(cache, nodes);
+}
+
+int MemoryCacheIsEmpty(CacheList clh)
+{
+    if (mem_size && cache_count)
+        return 0;
+    else
+        return 1;
+}
+
+int MemoryCacheIsFull(CacheList clh)
+{
+    if (cache_count == max_count)
+        return 1;
+    else
+        return 0;
+}

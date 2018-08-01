@@ -17,3 +17,6 @@ void MemoryCacheReset(CacheList clh);
 MemoryCache* MemoryCacheAlloc(CacheList clh);
 void MemoryCacheFree(CacheList clh, MemoryCache* mc_free);
 MemoryCache* MemoryCacheGet(CacheList clh);
+MemoryCache* MemoryCacheNext(MemoryCache* cache);
+int MemoryCacheIsEmpty(CacheList clh);
+int MemoryCacheIsFull(CacheList clh);
