@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+STAILQ_HEAD(cache_list_head, memory_cache);
+
 struct memory_cache
 {
     STAILQ_ENTRY(memory_cache) nodes;
@@ -12,7 +14,14 @@ struct memory_cache
     int   cache_size;
 } ;
 
-typedef struct cache_list_head* CacheList;
+typedef struct
+{
+    struct cache_list_head cache_head;
+    int    max_size;
+    int    mem_size;
+    int    cache_count;
+    int    max_count;
+} CacheList_t, *CacheList;
 typedef struct memory_cache MemoryCache;
 CacheList MemoryCacheCreate(int size, int count);
 void MemoryCacheReset(CacheList clh);

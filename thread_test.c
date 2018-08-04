@@ -51,6 +51,7 @@ void main()
 
     CacheList clh = MemoryCacheCreate(100,10);
     int id = 0;
+    getchar();
     while (cmd = getchar())
     {
         MemoryCache* mc_insert, * mc_first ;

@@ -1,46 +1,37 @@
 #include "linux/cache.h"
 
-STAILQ_HEAD(cache_list_head, memory_cache) cache_head =
-    STAILQ_HEAD_INITIALIZER(cache_head);
-
-struct cache_list_head* p_cache_head;
-int    max_size = 0;
-int    mem_size = 0;
-int    cache_count = 0;
-int    max_count = 0;
-
 CacheList MemoryCacheCreate(int size, int count)
 {
-    STAILQ_INIT(&cache_head);
-    p_cache_head = &cache_head;
+    CacheList clh = calloc(1, sizeof(CacheList_t));
+    STAILQ_INIT(&clh->cache_head);
 
-    max_size = size;
-    max_count = count;
-    mem_size = 0;
-    cache_count = 0;
-    return p_cache_head;
+    clh->max_size = size;
+    clh->max_count = count;
+    clh->mem_size = 0;
+    clh->cache_count = 0;
+    return clh;
 }
 
 void MemoryCacheReset(CacheList clh)
 {
-    while (!STAILQ_EMPTY(clh))
+    while (!STAILQ_EMPTY(&clh->cache_head))
     {
-        MemoryCache* mc_remove = STAILQ_FIRST(clh);
-        STAILQ_REMOVE_HEAD(clh, nodes);
+        MemoryCache* mc_remove = STAILQ_FIRST(&clh->cache_head);
+        STAILQ_REMOVE_HEAD(&clh->cache_head, nodes);
         free(mc_remove->cache_addr);
         free(mc_remove);
     }
 
-    mem_size = 0;
-    cache_count = 0;
+    clh->mem_size = 0;
+    clh->cache_count = 0;
 }
 
 void MemoryCacheDestroy(CacheList clh)
 {
-    while (!STAILQ_EMPTY(clh))
+    while (!STAILQ_EMPTY(&clh->cache_head))
     {
-        MemoryCache* mc_remove = STAILQ_FIRST(clh);
-        STAILQ_REMOVE_HEAD(clh, nodes);
+        MemoryCache* mc_remove = STAILQ_FIRST(&clh->cache_head);
+        STAILQ_REMOVE_HEAD(&clh->cache_head, nodes);
         free(mc_remove);
     }
 }
@@ -48,18 +39,18 @@ void MemoryCacheDestroy(CacheList clh)
 MemoryCache* MemoryCacheAlloc(CacheList clh)
 {
     MemoryCache* mc_insert = malloc(sizeof(MemoryCache));
-    mc_insert->cache_addr = calloc(1, max_size);
-    mc_insert->cache_size = max_size;
+    mc_insert->cache_addr = calloc(1, clh->max_size);
+    mc_insert->cache_size = clh->max_size;
 
-    if (cache_count > (max_count - 1))
+    if (clh->cache_count > (clh->max_count - 1))
         return NULL;
 
-    if (mem_size > (max_size * (max_count - 1)))
+    if (clh->mem_size > (clh->max_size * (clh->max_count - 1)))
         return NULL;
 
-    STAILQ_INSERT_TAIL(&cache_head, mc_insert, nodes);
-    mem_size += max_size;
-    cache_count += 1;
+    STAILQ_INSERT_TAIL(&clh->cache_head, mc_insert, nodes);
+    clh->mem_size += clh->max_size;
+    clh->cache_count += 1;
 
     return mc_insert;
 }
@@ -69,22 +60,22 @@ void MemoryCacheFree(CacheList clh, MemoryCache* mc_free)
     if (mc_free == NULL)
         return;
 
-    if (cache_count == 0)
+    if (clh->cache_count == 0)
         return;
 
-    if (mem_size == 0)
+    if (clh->mem_size == 0)
         return;
 
-    STAILQ_REMOVE(&cache_head, mc_free, memory_cache, nodes);
-    cache_count--;
-    mem_size -= max_size;
+    STAILQ_REMOVE(&clh->cache_head, mc_free, memory_cache, nodes);
+    clh->cache_count--;
+    clh->mem_size -= clh->max_size;
     free(mc_free->cache_addr);
     free(mc_free);
 }
 
 MemoryCache* MemoryCacheGet(CacheList clh)
 {
-    return STAILQ_FIRST(&cache_head);
+    return STAILQ_FIRST(&clh->cache_head);
 }
 
 MemoryCache* MemoryCacheNext(MemoryCache* cache)
@@ -94,7 +85,7 @@ MemoryCache* MemoryCacheNext(MemoryCache* cache)
 
 int MemoryCacheIsEmpty(CacheList clh)
 {
-    if (mem_size && cache_count)
+    if (clh->mem_size && clh->cache_count)
         return 0;
     else
         return 1;
@@ -102,7 +93,7 @@ int MemoryCacheIsEmpty(CacheList clh)
 
 int MemoryCacheIsFull(CacheList clh)
 {
-    if (cache_count == max_count)
+    if (clh->cache_count == clh->max_count)
         return 1;
     else
         return 0;
