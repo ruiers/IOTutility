@@ -1,3 +1,5 @@
+#ifndef __INC_LINUX_CACHE__
+#define __INC_LINUX_CACHE__
 #include <sys/queue.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -20,3 +22,5 @@ MemoryCache* MemoryCacheGet(CacheList clh);
 MemoryCache* MemoryCacheNext(MemoryCache* cache);
 int MemoryCacheIsEmpty(CacheList clh);
 int MemoryCacheIsFull(CacheList clh);
+#endif
+

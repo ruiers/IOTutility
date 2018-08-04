@@ -18,7 +18,6 @@ CacheList MemoryCacheCreate(int size, int count)
     max_count = count;
     mem_size = 0;
     cache_count = 0;
-
     return p_cache_head;
 }
 

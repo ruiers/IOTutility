@@ -69,13 +69,26 @@ mux_t_id muxCreate()
 
 int muxLock(mux_t_id id_mux)
 {
-    if (pthread_mutex_lock(id_mux) < 0) return -1;
-    else return 0;
+    if (pthread_mutex_lock(id_mux) < 0)
+        return -1;
+    else
+        return 0;
+}
+
+int muxTryLock(mux_t_id id_mux)
+{
+    if (pthread_mutex_trylock(id_mux) == 0)
+        return 0;
+    else
+        return -1;
 }
 
 int muxUnlock(mux_t_id id_mux)
 {
-    if (pthread_mutex_unlock(id_mux) < 0) return -1;
-    else return 0;
+    if (pthread_mutex_unlock(id_mux) < 0)
+        return -1;
+    else
+        return 0;
 
 }
+

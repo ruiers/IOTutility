@@ -149,7 +149,7 @@ void tcpPullFromServer(tcpClient* tcpClt)
     char p_recv_buff[1024];
     int  n_recv_len = 0;
 
-    while (1)
+    while (tcpClt->connected > 0)
     {
         n_recv_len = recvFromServer(tcpClt, p_recv_buff, 1024);
 
@@ -169,3 +169,11 @@ int tcpThreadConnect(tcpClient* tcpClt)
     tcpConnectToServer(tcpClt);
     taskCreate((void *)tcpPullFromServer, tcpClt);
 }
+
+int tcpDisconnect(tcpClient* tcpClt)
+{
+    close(tcpClt->fd);
+    tcpClt->connected = 0;
+    return 0;
+}
+
