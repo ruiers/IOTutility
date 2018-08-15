@@ -23,24 +23,28 @@ SRC_CONNECT = sys/linux/connect.c
 OBJ_CACHE = cache.o
 SRC_CACHE = sys/linux/cache.c
 
+LIB_UTILITY = libutility.so
 BIN_THREAD_TEST = thread_test.bin
 OBJ_THREAD_TEST = thread_test.o
 
-all: $(BIN_THREAD_TEST)
+all: $(LIB_UTILITY) $(BIN_THREAD_TEST)
 
 $(OBJ_THREAD): 
-	$(CC) -c $(SRC_THREAD) -I$(INC_PATH) $(LIBS_LD)
+	$(CC) -c $(SRC_THREAD) -I$(INC_PATH) $(LIBS_LD) -fPIC
 
 $(OBJ_CONNECT): 
-	$(CC) -c $(SRC_CONNECT) -I$(INC_PATH) $(LIBS_LD)
+	$(CC) -c $(SRC_CONNECT) -I$(INC_PATH) $(LIBS_LD) -fPIC
 
 $(OBJ_CACHE): 
-	$(CC) -c $(SRC_CACHE) -I$(INC_PATH) $(LIBS_LD)
+	$(CC) -c $(SRC_CACHE) -I$(INC_PATH) $(LIBS_LD) -fPIC
 
-$(BIN_THREAD_TEST): $(OBJ_THREAD_TEST) $(OBJ_THREAD) $(OBJ_CONNECT) $(OBJ_CACHE)
-	$(CC) -o $(BIN_THREAD_TEST) $(OBJ_THREAD_TEST) $(OBJ_THREAD) $(OBJ_CONNECT) $(OBJ_CACHE) $(LIBS_LD) 
+$(LIB_UTILITY): $(OBJ_THREAD) $(OBJ_CONNECT) $(OBJ_CACHE)
+	$(CC) -o $(LIB_UTILITY) $(OBJ_THREAD) $(OBJ_CONNECT) $(OBJ_CACHE) $(LIBS_LD) -fPIC -shared
+
+$(BIN_THREAD_TEST): $(OBJ_THREAD_TEST)
+	$(CC) -o $(BIN_THREAD_TEST) $(OBJ_THREAD_TEST) $(LIBS_LD) -L./ -lutility -Wl,-rpath=.
 
 clean:
-	rm *.o 
+	rm *.o *.so
 	rm *.bin
 
