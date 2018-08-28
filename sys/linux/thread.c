@@ -36,23 +36,37 @@ int semTake(sem_t_id id_sem, int ms_time)
 
     struct timespec timeout;
 
+    if (id_sem == NULL)
+        return -1;
+
     if (-1 == ms_time)
     {
-        if (sem_wait(id_sem) < 0) return -1;
-        else return 0;
+        if (sem_wait(id_sem) < 0)
+            return -1;
+        else
+            return 0;
     }
 
     timeout.tv_sec  = time(NULL) + ms_time / 1000;
     timeout.tv_nsec = 0;
 
-    if (ms_time % 1000) timeout.tv_sec++;
-    if (sem_timedwait(id_sem, &timeout) < 0) return -1;
-    else return 0;
+    if (ms_time % 1000)
+        timeout.tv_sec++;
+
+    if (sem_timedwait(id_sem, &timeout) < 0)
+        return -1;
+    else
+        return 0;
 }
 int semGive(sem_t_id id_sem)
 {
-    if (sem_post(id_sem) < 0) return -1;
-    else return 0;
+    if (id_sem == NULL)
+        return -1;
+
+    if (sem_post(id_sem) < 0)
+        return -1;
+    else
+        return 0;
 }
 
 mux_t_id muxCreate()
