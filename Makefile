@@ -23,6 +23,9 @@ SRC_CONNECT = sys/linux/connect.c
 OBJ_CACHE = cache.o
 SRC_CACHE = sys/linux/cache.c
 
+OBJ_MEMORYSTREAM = MemoryStream.o
+SRC_MEMORYSTREAM = sys/linux/MemoryStream.c
+
 LIB_UTILITY = libutility.so
 BIN_THREAD_TEST = thread_test.bin
 OBJ_THREAD_TEST = thread_test.o
@@ -38,8 +41,11 @@ $(OBJ_CONNECT):
 $(OBJ_CACHE): 
 	$(CC) -c $(SRC_CACHE) -I$(INC_PATH) $(LIBS_LD) -fPIC
 
-$(LIB_UTILITY): $(OBJ_THREAD) $(OBJ_CONNECT) $(OBJ_CACHE)
-	$(CC) -o $(LIB_UTILITY) $(OBJ_THREAD) $(OBJ_CONNECT) $(OBJ_CACHE) $(LIBS_LD) -fPIC -shared
+$(OBJ_MEMORYSTREAM): 
+	$(CC) -c $(SRC_MEMORYSTREAM) -I$(INC_PATH) $(LIBS_LD) -fPIC
+
+$(LIB_UTILITY): $(OBJ_THREAD) $(OBJ_CONNECT) $(OBJ_CACHE) $(OBJ_MEMORYSTREAM)
+	$(CC) -o $(LIB_UTILITY) $(OBJ_THREAD) $(OBJ_CONNECT) $(OBJ_CACHE) $(LIBS_LD) $(OBJ_MEMORYSTREAM) -fPIC -shared
 
 $(BIN_THREAD_TEST): $(OBJ_THREAD_TEST)
 	$(CC) -o $(BIN_THREAD_TEST) $(OBJ_THREAD_TEST) $(LIBS_LD) -L./ -lutility -Wl,-rpath=.
