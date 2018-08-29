@@ -28,6 +28,8 @@ void* thread(udpServer* uSvr)
         udpSendto(uSvr->ip_str, 5056, "ack", 3);
     }
 }
+
+#if 0
 void main()
 {
     char cmd = 0x0;
@@ -100,3 +102,47 @@ void main()
     }
     return;
 }
+#endif
+
+#if 1
+void main()
+{
+    char cmd[50];
+    taskSetName("MainThread");
+    ready = semCreate(0);
+
+    log_err("test start\n");
+
+    MemoryStream stream = MemoryStreamCreate();
+
+    while (1)
+    {
+        MemoryByteArray* array;
+        scanf("%s", cmd);
+        if (cmd[0] == 'Z')
+            break;
+        switch (cmd[0])
+        {
+        case 'a':
+            array = stream->AddByteArray(stream, 50);
+            memcpy(array->addr, cmd, 50);
+            break;
+        case 'd':
+            stream->DeleteByteArray(stream, stream->GetByteArray(stream));
+            break;
+        case 'l':
+            array = stream->GetByteArray(stream);
+            while(array != NULL)
+            {
+                log_ver("history %s", array->addr);
+                array = stream->NextByteArray(array);
+            }
+            break;
+        default:
+            break;
+        }
+        log_ver("cmd = %s\n", cmd);
+    }
+    return;
+}
+#endif

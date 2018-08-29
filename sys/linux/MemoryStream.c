@@ -61,6 +61,23 @@ MemoryByteArray* MemoryStreamAddByteArray(MemoryStream ms, int data_len)
     return insert;
 }
 
+void MemoryStreamDelByteArray(MemoryStream ms, MemoryByteArray* array)
+{
+    if (array == NULL)
+        return;
+
+    if (ms->Length == 0)
+        return;
+
+    ms->Length -= array->size;
+    ms->Position -= array->size;
+
+    STAILQ_REMOVE(&ms->head, array, MemoryBytes, nodes);
+
+    free(array->addr);
+    free(array);
+}
+
 MemoryByteArray* MemoryStreamGetByteArray(MemoryStream ms)
 {
     return STAILQ_FIRST(&ms->head);
@@ -95,10 +112,11 @@ MemoryStream MemoryStreamCreate(void)
     ms->Length   = 0;
     ms->Position = 0;
 
-    ms->AddByteArray   = MemoryStreamAddByteArray;
-    ms->GetByteArray   = MemoryStreamGetByteArray;
-    ms->NextByteArray  = MemoryStreamNextByteArray;
-    ms->EmptyByteArray = MemoryStreamEmptyByteArray;
+    ms->AddByteArray    = MemoryStreamAddByteArray;
+    ms->DeleteByteArray = MemoryStreamDelByteArray;
+    ms->GetByteArray    = MemoryStreamGetByteArray;
+    ms->NextByteArray   = MemoryStreamNextByteArray;
+    ms->EmptyByteArray  = MemoryStreamEmptyByteArray;
 
     return ms;
 }
