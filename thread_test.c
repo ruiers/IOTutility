@@ -104,7 +104,7 @@ void main()
 }
 #endif
 
-#if 1
+#if 0
 void main()
 {
     char cmd[50];
@@ -152,3 +152,53 @@ void main()
     return;
 }
 #endif
+
+#if 1
+void main()
+{
+    char cmd[50];
+    taskSetName("MainThread");
+    ready = semCreate(0);
+
+    log_err("test start\n");
+
+    MemoryStream stream = MemoryStreamCreate();
+
+    TcpClient* tcpClient = tcpClientCreate("10.56.56.236", 2022);
+
+
+    while (1)
+    {
+        MemoryByteArray* array;
+        scanf("%s", cmd);
+        if (cmd[0] == 'Z')
+            break;
+        switch (cmd[0])
+        {
+        case 'a':
+            array = stream->AddByteArray(stream, 50);
+            memcpy(array->addr, cmd, 50);
+            tcpClient->Send(tcpClient, cmd, strlen(cmd));
+            break;
+        case 'd':
+            stream->DeleteByteArray(stream, stream->GetByteArray(stream));
+            tcpClient->Disconnect(tcpClient);
+            break;
+        case 'l':
+            array = stream->GetByteArray(stream);
+            while(array != NULL)
+            {
+                log_ver("history %s", array->addr);
+                array = stream->NextByteArray(array);
+            }
+            tcpClient->Receive(tcpClient, cmd);
+            break;
+        default:
+            break;
+        }
+        log_ver("cmd = %s\n", cmd);
+    }
+    return;
+}
+#endif
+

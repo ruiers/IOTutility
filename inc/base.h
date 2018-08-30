@@ -4,6 +4,7 @@
 #include "./linux/cache.h"
 #include "./linux/MemoryStream.h"
 #include "./linux/UdpClient.h"
+#include "linux/TcpClass.h"
 #endif
 
 #ifdef FN_DEBUG
