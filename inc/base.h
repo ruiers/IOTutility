@@ -13,9 +13,8 @@
 #define log_time() \
 	{ \
 		struct timeval time_val; \
-		long int time_zone; \
 		struct tm * time_info; \
-		gettimeofday (&time_val, &time_zone); \
+		gettimeofday (&time_val, NULL); \
 		time_info = localtime (&time_val.tv_sec); \
 		printf("%02d-%02d %02d:%02d:%02d.%06ld ",time_info->tm_mon + 1, time_info->tm_mday, \
 		time_info->tm_hour, time_info->tm_min, time_info->tm_sec, time_val.tv_usec); \
