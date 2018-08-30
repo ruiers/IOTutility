@@ -3,6 +3,7 @@
 #include "./linux/connect.h"
 #include "./linux/cache.h"
 #include "./linux/MemoryStream.h"
+#include "./linux/UdpClient.h"
 #endif
 
 #ifdef FN_DEBUG

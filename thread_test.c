@@ -115,6 +115,9 @@ void main()
 
     MemoryStream stream = MemoryStreamCreate();
 
+    UdpClient* udpClient = udpClientCreate(2022);
+
+    udpClient->Connect(udpClient, "10.56.56.236", 2036);
     while (1)
     {
         MemoryByteArray* array;
@@ -126,9 +129,11 @@ void main()
         case 'a':
             array = stream->AddByteArray(stream, 50);
             memcpy(array->addr, cmd, 50);
+            udpClient->Send(udpClient, cmd, strlen(cmd));
             break;
         case 'd':
             stream->DeleteByteArray(stream, stream->GetByteArray(stream));
+            udpClient->Sendto(udpClient, cmd, strlen(cmd), "127.0.0.1", 2035);
             break;
         case 'l':
             array = stream->GetByteArray(stream);
@@ -137,6 +142,7 @@ void main()
                 log_ver("history %s", array->addr);
                 array = stream->NextByteArray(array);
             }
+            udpClient->Receive(udpClient, cmd);
             break;
         default:
             break;
