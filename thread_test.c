@@ -176,8 +176,7 @@ void main()
         switch (cmd[0])
         {
         case 'a':
-            array = stream->AddByteArray(stream, 50);
-            memcpy(array->addr, cmd, 50);
+            array = stream->AddByteArray(stream, cmd, 50);
             tcpClient->Send(tcpClient, cmd, strlen(cmd));
             break;
         case 'd':

@@ -29,7 +29,7 @@ typedef struct MemoryStream_Head
     void* (*Write) (struct MemoryStream_Head* this, char* data_addr, int data_len);
     void* (*Read)  (struct MemoryStream_Head* this, char* data_addr, int data_len);
 
-    MemoryByteArray* (*AddByteArray)  (struct MemoryStream_Head* this, int data_len);
+    MemoryByteArray* (*AddByteArray)  (struct MemoryStream_Head* this, char* data_addr, int data_len);
     void (*DeleteByteArray) (struct MemoryStream_Head* this, MemoryByteArray* array);
     MemoryByteArray* (*GetByteArray)  (struct MemoryStream_Head* this);
     MemoryByteArray* (*NextByteArray) (MemoryByteArray *next);

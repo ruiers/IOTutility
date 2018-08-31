@@ -48,11 +48,13 @@ MemoryStream MemoryStreamAlloc(int size)
     return ms;
 }
 
-MemoryByteArray* MemoryStreamAddByteArray(MemoryStream ms, int data_len)
+MemoryByteArray* MemoryStreamAddByteArray(MemoryStream ms, char* data_addr, int data_len)
 {
     MemoryByteArray* insert = malloc(sizeof(MemoryByteArray));
     insert->addr = calloc(1, data_len);
     insert->size = data_len;
+
+    memcpy(insert->addr, data_addr, data_len);
 
     STAILQ_INSERT_TAIL(&ms->head, insert, nodes);
     ms->Length += data_len;
