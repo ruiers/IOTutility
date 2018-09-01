@@ -5,6 +5,7 @@
 #include "./linux/MemoryStream.h"
 #include "./linux/UdpClient.h"
 #include "linux/TcpClass.h"
+#include "linux/mqttClass.h"
 #endif
 
 #ifdef FN_DEBUG

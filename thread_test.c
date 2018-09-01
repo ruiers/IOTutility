@@ -153,7 +153,7 @@ void main()
 }
 #endif
 
-#if 1
+#if 0
 void main()
 {
     char cmd[50];
@@ -201,3 +201,79 @@ void main()
 }
 #endif
 
+#if 0
+
+struct mqtt_connect
+{
+    char head_flag;
+    char msg_len;
+    short protocol_name_len;
+    char protocol_name[6];
+    char mqtt_version;
+    char connect_flag;
+    short keep_alive;
+    short client_id_len;
+    char client_id[23];
+};
+
+struct mqtt_publish
+{
+    char head_flag;
+    char msg_len;
+    short topic_len;
+    char  topic[11];
+    char  message[5];
+};
+
+
+int main()
+{
+    TcpClient* tcpClient = tcpClientCreate("10.56.56.236", 2022);
+    char recvBuf[1500];
+    int  recvLen = 0;
+    //recvLen = tcpClient->Receive(tcpClient, recvBuf);
+    log_ver("%d:%s", recvLen, recvBuf);
+    struct mqtt_connect con =
+    {
+        .head_flag = 0x10,
+        .msg_len = 37,
+        .protocol_name_len = htons(6),
+        .mqtt_version = 3,
+        .connect_flag = 0x02,
+        .keep_alive = htons(60),
+        .client_id_len = htons(23),
+    };
+
+    struct mqtt_publish pub =
+    {
+        .head_flag = 0x30,
+        .msg_len = 18,
+        .topic_len = htons(11),
+
+    };
+
+    strncpy(con.protocol_name, "MQIsdp", 6);
+    strncpy(con.client_id, "mosqpub/395-DESKTOP-S49", 23);
+    tcpClient->Send(tcpClient, &con, sizeof(con) - 1);
+    //recvLen = tcpClient->Receive(tcpClient, recvBuf);
+    log_ver("%d:%s", recvLen, recvBuf);
+    getchar();
+    strncpy(pub.topic, "/kemov/test", 11);
+    strncpy(pub.message, "/kemov/hello", 5);
+    tcpClient->Send(tcpClient, &pub, sizeof(pub));
+    //recvLen = tcpClient->Receive(tcpClient, recvBuf);
+    log_ver("%d:%s", recvLen, recvBuf);
+    //printf("paused\n");
+    pause();
+}
+#endif
+
+
+void main()
+{
+    TcpClient* tcpClient = tcpClientCreate("10.56.56.236", 1883);
+
+    MQTT_ControlPacket*  mqttConnect = MQTT_ControlPacketCreate(CONNECT);
+    MQTT_ControlPacketGetPacketData(mqttConnect);
+    tcpClient->Send(tcpClient, mqttConnect->PacketData, mqttConnect->PacketLength);
+}
