@@ -18,3 +18,7 @@ mosquitto_sub -h iot.eclipse.org -t "wuhan/#" -v
 ~~~
 wuhan/test 12
 ~~~
+4. Screen shots
+
+![pcap](https://raw.githubusercontent.com/ruiers/IOTutility/master/pcap_thread_test_iot.PNG)
+![console](https://raw.githubusercontent.com/ruiers/IOTutility/master/pcap_thread_test_iot_responds.PNG)
