@@ -79,6 +79,7 @@ typedef struct mqtt_control_packet
 {
     int              PacketType;
     int              PacketLength;
+    int              PayloadLength;
     char*            PacketData;
 
     MemoryStream     ControlPacket;

@@ -34,6 +34,33 @@ int client_id_generate(char* client_id, const char *id_base)
     return strlen(client_id);
 }
 
+int encode_integer_to_length(char* remaining_length, int value)
+{
+    char std_bytes[4];
+    int  bytes_total = 0, bytes_index = 0, X = value, encodedByte = 0;
+
+    memset(std_bytes, 0, sizeof(std_bytes));
+
+    do
+    {
+        encodedByte = X % 128;
+        X = X / 128;
+
+        if ( X > 0)
+            encodedByte = X | 128;
+        else
+            std_bytes[bytes_index++] = encodedByte;
+    }
+    while (X > 0);
+
+    bytes_total = bytes_index;
+
+    for (bytes_index = bytes_total - 1; bytes_index >= 0; bytes_index--)
+        remaining_length[bytes_index] = std_bytes[bytes_index];
+
+    return bytes_total;
+}
+
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
 {
     MQTT_ControlPacket* packet = calloc(1, sizeof(MQTT_ControlPacket));
@@ -41,6 +68,7 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
     packet->ControlPacket = MemoryStreamCreate();
 
     int   length_of_payload = 0;
+    int   remaining_length_bytes = 0;
     void* fixedHeader = NULL;
     void* variableHeader = NULL;
     void* PayloadStart = NULL;
@@ -63,9 +91,8 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
 
         fixedHeader = (FixedHeader*) calloc(1, 5);
         ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
-        ((FixedHeader*) fixedHeader)->remaining_length[0] = sizeof(VariableHeader_Connect) + (length_of_payload + sizeof(short));
-
-        packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, 2);
+        packet->PayloadLength = sizeof(VariableHeader_Connect) + length_of_payload + sizeof(short);
+        packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, sizeof(FixedHeader));
         packet->VariableHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) variableHeader, sizeof(VariableHeader_Connect));
         packet->PayloadStart = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) PayloadStart, length_of_payload + sizeof(short));
         break;
@@ -75,7 +102,7 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
         ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
         ((FixedHeader*) fixedHeader)->remaining_length[0] = 0;
 
-        packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, 2);
+        packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, sizeof(FixedHeader));
         break;
 
     case DISCONNECT:
@@ -83,7 +110,7 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
         ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
         ((FixedHeader*) fixedHeader)->remaining_length[0] = 0;
 
-        packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, 2);
+        packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, sizeof(FixedHeader));
         break;
 
     default:
@@ -96,10 +123,12 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
 char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this)
 {
     MemoryByteArray* array = this->ControlPacket->GetByteArray(this->ControlPacket);
-    int pos = 0;
+    int pos = 0, remaining_length_bytes = 0;
 
-    this->PacketLength = this->ControlPacket->Length;
     this->PacketData = calloc(1, this->PacketLength);
+    remaining_length_bytes = encode_integer_to_length( ((char *) this->FixedHeader->addr) + 1, this->PayloadLength);
+    this->PacketLength = this->ControlPacket->Length - sizeof(FixedHeader) + remaining_length_bytes + 1;
+    this->FixedHeader->size = remaining_length_bytes + 1;
 
     while(array != NULL)
     {
@@ -119,16 +148,15 @@ int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int
     topic_payload->length = htons(topic_length);
     memcpy(topic_payload->message, topic_string, topic_length);
     this->VariableHeader = this->ControlPacket->AddByteArray(this->ControlPacket, (char *) topic_payload, sizeof(short) + topic_length);
-
-    ((FixedHeader*) fixedHeader)->remaining_length[0] += this->VariableHeader->size;
+    this->PayloadLength  += this->VariableHeader->size;
 }
 
 int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int msg_length)
 {
     FixedHeader* fixedHeader = (FixedHeader*) this->FixedHeader->addr;
 
-    this->PayloadStart = this->ControlPacket->AddByteArray(this->ControlPacket, (char *) msg_string, msg_length);
-    ((FixedHeader*) fixedHeader)->remaining_length[0] += this->PayloadStart->size;
+    this->PayloadStart  = this->ControlPacket->AddByteArray(this->ControlPacket, (char *) msg_string, msg_length);
+    this->PayloadLength += this->PayloadStart->size;
 }
 
 int MQTT_SessionConnect(MQTT_Session* this)
