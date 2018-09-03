@@ -292,9 +292,18 @@ void main()
 void main()
 {
     MQTT_Connection* con = MQTT_ConnectionCreate("198.41.30.241", 1883);
+    char value[10];
+    int  count = 0;
 
     con->Connect(con);
-    sleep(1);
-    con->Publish(con, "wuhan/test", "11", 2);
+    printf("connected\n");
+
+    while (++count)
+    {
+        sprintf(value, "%d", count);
+        con->Publish(con, "wuhan/test", value, strlen(value));
+        sleep(1);
+    }
+
     con->Disconnect(con);
 }

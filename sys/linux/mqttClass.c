@@ -130,9 +130,17 @@ int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int
 int MQTT_ConnectionConnect(MQTT_Connection* this)
 {
     MQTT_ControlPacket*  mqttConnect = MQTT_ControlPacketCreate(CONNECT);
+    MQTT_ACKPacket       mqttACK;
 
+    this->Status = STA_WAITING_ACK;
     MQTT_ControlPacketGetPacketData(mqttConnect);
     this->Connection->Send(this->Connection, mqttConnect->PacketData, mqttConnect->PacketLength);
+    this->Connection->Receive(this->Connection, (char *) &mqttACK);
+
+    if ((mqttACK.type_and_flag == CONNACK) && (mqttACK.ack_code[1] == CONNACK_ACCEPTED))
+        this->Status = STA_CONNECTED;
+    else
+        this->Status = STA_CONNECT_NO_ACK;
 }
 
 int MQTT_ConnectionDisonnect(MQTT_Connection* this)
@@ -145,10 +153,19 @@ int MQTT_ConnectionDisonnect(MQTT_Connection* this)
 int MQTT_ConnectionPublish(MQTT_Connection* this, char* topic, char* message, int length)
 {
     MQTT_ControlPacket*  mqttPublish = MQTT_ControlPacketCreate(PUBLISH);
+    MQTT_ACKPacket       mqttACK;
+
+    if (this->Status != STA_CONNECTED)
+        return -1;
+
+    this->Status = STA_WAITING_ACK;
     MQTT_ControlPacketSetTopic(mqttPublish, topic, strlen(topic));
     MQTT_ControlPacketSetMessage(mqttPublish, message, length);
     MQTT_ControlPacketGetPacketData(mqttPublish);
     this->Connection->Send(this->Connection, mqttPublish->PacketData, mqttPublish->PacketLength);
+    //this->Connection->Receive(this->Connection, (char *) &mqttACK);
+
+    this->Status = STA_CONNECTED;
 }
 
 MQTT_Connection* MQTT_ConnectionCreate(char* ipStr, int portNum)
@@ -160,8 +177,10 @@ MQTT_Connection* MQTT_ConnectionCreate(char* ipStr, int portNum)
 
     connection->Connection = tcpClientCreate(connection->ServerIPString, connection->ServerPortNumber);
 
-    connection->Connect   = MQTT_ConnectionConnect;
+    connection->Connect    = MQTT_ConnectionConnect;
     connection->Disconnect = MQTT_ConnectionDisonnect;
-    connection->Publish   = MQTT_ConnectionPublish;
+    connection->Publish    = MQTT_ConnectionPublish;
+
+    connection->Status     = STA_CREATED;
     return connection;
 }

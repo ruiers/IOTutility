@@ -38,6 +38,15 @@
 #define PINGRESP 0xD0
 #define DISCONNECT 0xE0
 
+enum
+{
+    STA_CREATED = 0x1,
+    STA_CONNECTED,
+    STA_WAITING_ACK,
+    STA_CONNECT_NO_ACK,
+    STA_PUBLISH_NO_ACK,
+} MQTT_Status;
+
 typedef struct FixedHeader
 {
     char type_and_flag;
@@ -58,6 +67,13 @@ typedef struct Payload
     short length;
     char  message[0];
 } Payload;
+
+typedef struct ACK_Code
+{
+    char type_and_flag;
+    char remaining_length;
+    char ack_code[2];
+} MQTT_ACKPacket;
 
 typedef struct mqtt_control_packet
 {
