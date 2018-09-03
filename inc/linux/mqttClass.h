@@ -2,6 +2,7 @@
 #define __INC_LINUX_MQTTCLASS__
 
 #include "linux/MemoryStream.h"
+#include "linux/TcpClass.h"
 
 #define PROTOCOL_NAME_v31 "MQIsdp"
 #define PROTOCOL_VERSION_v31 3
@@ -70,8 +71,22 @@ typedef struct mqtt_control_packet
     MemoryByteArray* PayloadStart;
 } MQTT_ControlPacket;
 
+typedef struct mqtt_control_connection
+{
+    int        Status;
+    char       ServerIPString[16];
+    int        ServerPortNumber;
+    TcpClient* Connection;
+
+    int (*Connect)   (struct mqtt_control_connection* this);
+    int (*Disconnect) (struct mqtt_control_connection* this);
+    int (*Publish)   (struct mqtt_control_connection* this, char* topic, char* message, int length);
+} MQTT_Connection;
+
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType);
 char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this);
 int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int topic_length);
 int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int msg_length);
+
+MQTT_Connection* MQTT_ConnectionCreate(char* ipStr, int portNum);
 #endif

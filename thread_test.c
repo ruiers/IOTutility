@@ -266,7 +266,7 @@ int main()
     //printf("paused\n");
     pause();
 }
-#endif
+
 
 
 void main()
@@ -285,4 +285,16 @@ void main()
     MQTT_ControlPacket*  mqttDisconnect = MQTT_ControlPacketCreate(DISCONNECT);
     MQTT_ControlPacketGetPacketData(mqttDisconnect);
     tcpClient->Send(tcpClient, mqttDisconnect->PacketData, mqttDisconnect->PacketLength);
+}
+
+#endif
+
+void main()
+{
+    MQTT_Connection* con = MQTT_ConnectionCreate("198.41.30.241", 1883);
+
+    con->Connect(con);
+    sleep(1);
+    con->Publish(con, "wuhan/test", "11", 2);
+    con->Disconnect(con);
 }

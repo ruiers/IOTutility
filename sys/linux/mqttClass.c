@@ -126,3 +126,42 @@ int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int
     this->PayloadStart = this->ControlPacket->AddByteArray(this->ControlPacket, (char *) msg_string, msg_length);
     ((FixedHeader*) fixedHeader)->remaining_length[0] += this->PayloadStart->size;
 }
+
+int MQTT_ConnectionConnect(MQTT_Connection* this)
+{
+    MQTT_ControlPacket*  mqttConnect = MQTT_ControlPacketCreate(CONNECT);
+
+    MQTT_ControlPacketGetPacketData(mqttConnect);
+    this->Connection->Send(this->Connection, mqttConnect->PacketData, mqttConnect->PacketLength);
+}
+
+int MQTT_ConnectionDisonnect(MQTT_Connection* this)
+{
+    MQTT_ControlPacket*  mqttDisconnect = MQTT_ControlPacketCreate(DISCONNECT);
+    MQTT_ControlPacketGetPacketData(mqttDisconnect);
+    this->Connection->Send(this->Connection, mqttDisconnect->PacketData, mqttDisconnect->PacketLength);
+}
+
+int MQTT_ConnectionPublish(MQTT_Connection* this, char* topic, char* message, int length)
+{
+    MQTT_ControlPacket*  mqttPublish = MQTT_ControlPacketCreate(PUBLISH);
+    MQTT_ControlPacketSetTopic(mqttPublish, topic, strlen(topic));
+    MQTT_ControlPacketSetMessage(mqttPublish, message, length);
+    MQTT_ControlPacketGetPacketData(mqttPublish);
+    this->Connection->Send(this->Connection, mqttPublish->PacketData, mqttPublish->PacketLength);
+}
+
+MQTT_Connection* MQTT_ConnectionCreate(char* ipStr, int portNum)
+{
+    MQTT_Connection* connection = calloc(1, sizeof(MQTT_Connection));
+
+    connection->ServerPortNumber = portNum;
+    strncpy(connection->ServerIPString, ipStr, strlen(ipStr));
+
+    connection->Connection = tcpClientCreate(connection->ServerIPString, connection->ServerPortNumber);
+
+    connection->Connect   = MQTT_ConnectionConnect;
+    connection->Disconnect = MQTT_ConnectionDisonnect;
+    connection->Publish   = MQTT_ConnectionPublish;
+    return connection;
+}
