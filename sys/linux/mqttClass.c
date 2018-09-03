@@ -10,6 +10,7 @@ int client_id_generate(char* client_id, const char *id_base)
     if (client_id == NULL)
     {
         client_id = malloc(len);
+
         if(!client_id)
         {
             return -1;
@@ -56,7 +57,6 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
         ((VariableHeader_Connect*) variableHeader)->connect_flags = 2;
         ((VariableHeader_Connect*) variableHeader)->keep_alive = htons(60);
 
-
         PayloadStart = (Payload*) calloc(1, 23 + sizeof(short));
         length_of_payload = client_id_generate(((Payload*) PayloadStart)->message, "mosqpub");
         ((Payload*) PayloadStart)->length = htons(length_of_payload);
@@ -68,8 +68,8 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
         packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, 2);
         packet->VariableHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) variableHeader, sizeof(VariableHeader_Connect));
         packet->PayloadStart = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) PayloadStart, length_of_payload + sizeof(short));
-
         break;
+
     case PUBLISH:
         fixedHeader = (FixedHeader*) calloc(1, 5);
         ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
@@ -77,12 +77,15 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
 
         packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, 2);
         break;
+
     case DISCONNECT:
         fixedHeader = (FixedHeader*) calloc(1, 5);
         ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
         ((FixedHeader*) fixedHeader)->remaining_length[0] = 0;
 
         packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, 2);
+        break;
+
     default:
         break;
     }
@@ -94,6 +97,7 @@ char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this)
 {
     MemoryByteArray* array = this->ControlPacket->GetByteArray(this->ControlPacket);
     int pos = 0;
+
     this->PacketLength = this->ControlPacket->Length;
     this->PacketData = calloc(1, this->PacketLength);
 
@@ -127,15 +131,15 @@ int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int
     ((FixedHeader*) fixedHeader)->remaining_length[0] += this->PayloadStart->size;
 }
 
-int MQTT_ConnectionConnect(MQTT_Connection* this)
+int MQTT_SessionConnect(MQTT_Session* this)
 {
     MQTT_ControlPacket*  mqttConnect = MQTT_ControlPacketCreate(CONNECT);
     MQTT_ACKPacket       mqttACK;
 
     this->Status = STA_WAITING_ACK;
     MQTT_ControlPacketGetPacketData(mqttConnect);
-    this->Connection->Send(this->Connection, mqttConnect->PacketData, mqttConnect->PacketLength);
-    this->Connection->Receive(this->Connection, (char *) &mqttACK);
+    this->Session->Send(this->Session, mqttConnect->PacketData, mqttConnect->PacketLength);
+    this->Session->Receive(this->Session, (char *) &mqttACK);
 
     if ((mqttACK.type_and_flag == CONNACK) && (mqttACK.ack_code[1] == CONNACK_ACCEPTED))
         this->Status = STA_CONNECTED;
@@ -143,14 +147,15 @@ int MQTT_ConnectionConnect(MQTT_Connection* this)
         this->Status = STA_CONNECT_NO_ACK;
 }
 
-int MQTT_ConnectionDisonnect(MQTT_Connection* this)
+int MQTT_SessionDisonnect(MQTT_Session* this)
 {
     MQTT_ControlPacket*  mqttDisconnect = MQTT_ControlPacketCreate(DISCONNECT);
+
     MQTT_ControlPacketGetPacketData(mqttDisconnect);
-    this->Connection->Send(this->Connection, mqttDisconnect->PacketData, mqttDisconnect->PacketLength);
+    this->Session->Send(this->Session, mqttDisconnect->PacketData, mqttDisconnect->PacketLength);
 }
 
-int MQTT_ConnectionPublish(MQTT_Connection* this, char* topic, char* message, int length)
+int MQTT_SessionPublish(MQTT_Session* this, char* topic, char* message, int length)
 {
     MQTT_ControlPacket*  mqttPublish = MQTT_ControlPacketCreate(PUBLISH);
     MQTT_ACKPacket       mqttACK;
@@ -162,25 +167,25 @@ int MQTT_ConnectionPublish(MQTT_Connection* this, char* topic, char* message, in
     MQTT_ControlPacketSetTopic(mqttPublish, topic, strlen(topic));
     MQTT_ControlPacketSetMessage(mqttPublish, message, length);
     MQTT_ControlPacketGetPacketData(mqttPublish);
-    this->Connection->Send(this->Connection, mqttPublish->PacketData, mqttPublish->PacketLength);
+    this->Session->Send(this->Session, mqttPublish->PacketData, mqttPublish->PacketLength);
     //this->Connection->Receive(this->Connection, (char *) &mqttACK);
 
     this->Status = STA_CONNECTED;
 }
 
-MQTT_Connection* MQTT_ConnectionCreate(char* ipStr, int portNum)
+MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum)
 {
-    MQTT_Connection* connection = calloc(1, sizeof(MQTT_Connection));
+    MQTT_Session* session = calloc(1, sizeof(MQTT_Session));
 
-    connection->ServerPortNumber = portNum;
-    strncpy(connection->ServerIPString, ipStr, strlen(ipStr));
+    session->ServerPortNumber = portNum;
+    strncpy(session->ServerIPString, ipStr, strlen(ipStr));
 
-    connection->Connection = tcpClientCreate(connection->ServerIPString, connection->ServerPortNumber);
+    session->Session = tcpClientCreate(session->ServerIPString, session->ServerPortNumber);
 
-    connection->Connect    = MQTT_ConnectionConnect;
-    connection->Disconnect = MQTT_ConnectionDisonnect;
-    connection->Publish    = MQTT_ConnectionPublish;
+    session->Connect    = MQTT_SessionConnect;
+    session->Disconnect = MQTT_SessionDisonnect;
+    session->Publish    = MQTT_SessionPublish;
+    session->Status     = STA_CREATED;
 
-    connection->Status     = STA_CREATED;
-    return connection;
+    return session;
 }

@@ -87,22 +87,22 @@ typedef struct mqtt_control_packet
     MemoryByteArray* PayloadStart;
 } MQTT_ControlPacket;
 
-typedef struct mqtt_control_connection
+typedef struct mqtt_control_session
 {
     int        Status;
     char       ServerIPString[16];
     int        ServerPortNumber;
-    TcpClient* Connection;
+    TcpClient* Session;
 
-    int (*Connect)   (struct mqtt_control_connection* this);
-    int (*Disconnect) (struct mqtt_control_connection* this);
-    int (*Publish)   (struct mqtt_control_connection* this, char* topic, char* message, int length);
-} MQTT_Connection;
+    int (*Connect)    (struct mqtt_control_session* this);
+    int (*Disconnect) (struct mqtt_control_session* this);
+    int (*Publish)    (struct mqtt_control_session* this, char* topic, char* message, int length);
+} MQTT_Session;
 
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType);
 char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this);
 int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int topic_length);
 int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int msg_length);
 
-MQTT_Connection* MQTT_ConnectionCreate(char* ipStr, int portNum);
+MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum);
 #endif

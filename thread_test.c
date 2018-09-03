@@ -291,19 +291,19 @@ void main()
 
 void main()
 {
-    MQTT_Connection* con = MQTT_ConnectionCreate("198.41.30.241", 1883);
+    MQTT_Session* Session = MQTT_SessionCreate("198.41.30.241", 1883);
     char value[10];
     int  count = 0;
 
-    con->Connect(con);
+    Session->Connect(Session);
     printf("connected\n");
 
     while (++count)
     {
         sprintf(value, "%d", count);
-        con->Publish(con, "wuhan/test", value, strlen(value));
+        Session->Publish(Session, "wuhan/test", value, strlen(value));
         sleep(1);
     }
 
-    con->Disconnect(con);
+    Session->Disconnect(Session);
 }
