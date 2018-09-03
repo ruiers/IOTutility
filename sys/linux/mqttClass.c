@@ -77,6 +77,12 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
 
         packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, 2);
         break;
+    case DISCONNECT:
+        fixedHeader = (FixedHeader*) calloc(1, 5);
+        ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
+        ((FixedHeader*) fixedHeader)->remaining_length[0] = 0;
+
+        packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, 2);
     default:
         break;
     }

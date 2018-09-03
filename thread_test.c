@@ -271,15 +271,18 @@ int main()
 
 void main()
 {
-    TcpClient* tcpClient = tcpClientCreate("10.56.56.236", 1883);
-
+    TcpClient* tcpClient = tcpClientCreate("198.41.30.241", 1883);
     MQTT_ControlPacket*  mqttConnect = MQTT_ControlPacketCreate(CONNECT);
     MQTT_ControlPacketGetPacketData(mqttConnect);
     tcpClient->Send(tcpClient, mqttConnect->PacketData, mqttConnect->PacketLength);
 
     MQTT_ControlPacket*  mqttPublish = MQTT_ControlPacketCreate(PUBLISH);
-    MQTT_ControlPacketSetTopic(mqttPublish, "kemov/test", 10);
+    MQTT_ControlPacketSetTopic(mqttPublish, "wuhan/test", 10);
     MQTT_ControlPacketSetMessage(mqttPublish, "12", 2);
     MQTT_ControlPacketGetPacketData(mqttPublish);
     tcpClient->Send(tcpClient, mqttPublish->PacketData, mqttPublish->PacketLength);
+
+    MQTT_ControlPacket*  mqttDisconnect = MQTT_ControlPacketCreate(DISCONNECT);
+    MQTT_ControlPacketGetPacketData(mqttDisconnect);
+    tcpClient->Send(tcpClient, mqttDisconnect->PacketData, mqttDisconnect->PacketLength);
 }
