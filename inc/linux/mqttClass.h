@@ -71,4 +71,5 @@ typedef struct mqtt_control_packet
 } MQTT_ControlPacket;
 
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType);
+char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this);
 #endif

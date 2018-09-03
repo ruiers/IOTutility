@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <netinet/in.h>
 #include "linux/mqttClass.h"
 
 int client_id_generate(char* client_id, const char *id_base)
@@ -38,6 +39,7 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
 
     packet->ControlPacket = MemoryStreamCreate();
 
+    int   length_of_payload = 0;
     void* fixedHeader = NULL;
     void* variableHeader = NULL;
     void* PayloadStart = NULL;
@@ -48,22 +50,24 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
     {
     case CONNECT:
         variableHeader = (VariableHeader_Connect*) calloc(1, sizeof(VariableHeader_Connect));
-        ((VariableHeader_Connect*) variableHeader)->protocol_length = htons(sizeof(PROTOCOL_NAME_v311));
-        memcpy(((VariableHeader_Connect*) variableHeader)->protocol_name, PROTOCOL_NAME_v311, sizeof(PROTOCOL_NAME_v311));
+        ((VariableHeader_Connect*) variableHeader)->protocol_length = htons(sizeof(PROTOCOL_NAME_v311) - 1);
+        memcpy(((VariableHeader_Connect*) variableHeader)->protocol_name, PROTOCOL_NAME_v311, sizeof(PROTOCOL_NAME_v311) - 1);
+        ((VariableHeader_Connect*) variableHeader)->protocol_level = PROTOCOL_VERSION_v311;
         ((VariableHeader_Connect*) variableHeader)->connect_flags = 2;
-        ((VariableHeader_Connect*) variableHeader)->keep_alive = 60;
+        ((VariableHeader_Connect*) variableHeader)->keep_alive = htons(60);
 
 
         PayloadStart = (Payload*) calloc(1, 23 + sizeof(short));
-        ((Payload*) PayloadStart)->length = client_id_generate(((Payload*) PayloadStart)->message, "mosqpub");
+        length_of_payload = client_id_generate(((Payload*) PayloadStart)->message, "mosqpub");
+        ((Payload*) PayloadStart)->length = htons(length_of_payload);
 
         fixedHeader = (FixedHeader*) calloc(1, 5);
         ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
-        ((FixedHeader*) fixedHeader)->remaining_length[0] = sizeof(VariableHeader_Connect) + ((Payload*) PayloadStart)->length + sizeof(short);
+        ((FixedHeader*) fixedHeader)->remaining_length[0] = sizeof(VariableHeader_Connect) + (length_of_payload + sizeof(short));
 
         packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, 2);
         packet->VariableHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) variableHeader, sizeof(VariableHeader_Connect));
-        packet->PayloadStart = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) PayloadStart, ((Payload*) PayloadStart)->length + sizeof(short));
+        packet->PayloadStart = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) PayloadStart, length_of_payload + sizeof(short));
 
         break;
     case PUBLISH:
@@ -79,7 +83,7 @@ char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this)
 {
     MemoryByteArray* array = this->ControlPacket->GetByteArray(this->ControlPacket);
     int pos = 0;
-    this->PacketLength = this->FixedHeader->size + this->VariableHeader->size + this->PayloadStart->size;
+    this->PacketLength = this->ControlPacket->Length;
     this->PacketData = calloc(1, this->PacketLength);
 
     while(array != NULL)
