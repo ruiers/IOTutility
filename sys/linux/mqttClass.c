@@ -71,6 +71,11 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
 
         break;
     case PUBLISH:
+        fixedHeader = (FixedHeader*) calloc(1, 5);
+        ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
+        ((FixedHeader*) fixedHeader)->remaining_length[0] = 0;
+
+        packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, 2);
         break;
     default:
         break;
@@ -94,4 +99,24 @@ char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this)
     }
 
     return this->PacketData;
+}
+
+int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int topic_length)
+{
+    FixedHeader* fixedHeader = (FixedHeader*) this->FixedHeader->addr;
+    Payload* topic_payload = calloc(1, sizeof(short) + topic_length);
+
+    topic_payload->length = htons(topic_length);
+    memcpy(topic_payload->message, topic_string, topic_length);
+    this->VariableHeader = this->ControlPacket->AddByteArray(this->ControlPacket, (char *) topic_payload, sizeof(short) + topic_length);
+
+    ((FixedHeader*) fixedHeader)->remaining_length[0] += this->VariableHeader->size;
+}
+
+int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int msg_length)
+{
+    FixedHeader* fixedHeader = (FixedHeader*) this->FixedHeader->addr;
+
+    this->PayloadStart = this->ControlPacket->AddByteArray(this->ControlPacket, (char *) msg_string, msg_length);
+    ((FixedHeader*) fixedHeader)->remaining_length[0] += this->PayloadStart->size;
 }

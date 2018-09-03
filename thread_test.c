@@ -276,4 +276,10 @@ void main()
     MQTT_ControlPacket*  mqttConnect = MQTT_ControlPacketCreate(CONNECT);
     MQTT_ControlPacketGetPacketData(mqttConnect);
     tcpClient->Send(tcpClient, mqttConnect->PacketData, mqttConnect->PacketLength);
+
+    MQTT_ControlPacket*  mqttPublish = MQTT_ControlPacketCreate(PUBLISH);
+    MQTT_ControlPacketSetTopic(mqttPublish, "kemov/test", 10);
+    MQTT_ControlPacketSetMessage(mqttPublish, "12", 2);
+    MQTT_ControlPacketGetPacketData(mqttPublish);
+    tcpClient->Send(tcpClient, mqttPublish->PacketData, mqttPublish->PacketLength);
 }
