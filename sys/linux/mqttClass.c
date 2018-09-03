@@ -37,7 +37,7 @@ int client_id_generate(char* client_id, const char *id_base)
 int encode_integer_to_length(char* remaining_length, int value)
 {
     char std_bytes[4];
-    int  bytes_total = 0, bytes_index = 0, X = value, encodedByte = 0;
+    int  bytes_total = 0, X = value, encodedByte = 0;
 
     memset(std_bytes, 0, sizeof(std_bytes));
 
@@ -47,16 +47,11 @@ int encode_integer_to_length(char* remaining_length, int value)
         X = X / 128;
 
         if ( X > 0)
-            encodedByte = X | 128;
-        else
-            std_bytes[bytes_index++] = encodedByte;
+            encodedByte = encodedByte | 0x80;
+
+        remaining_length[bytes_total++] = encodedByte;
     }
     while (X > 0);
-
-    bytes_total = bytes_index;
-
-    for (bytes_index = bytes_total - 1; bytes_index >= 0; bytes_index--)
-        remaining_length[bytes_index] = std_bytes[bytes_index];
 
     return bytes_total;
 }
@@ -125,10 +120,10 @@ char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this)
     MemoryByteArray* array = this->ControlPacket->GetByteArray(this->ControlPacket);
     int pos = 0, remaining_length_bytes = 0;
 
-    this->PacketData = calloc(1, this->PacketLength);
     remaining_length_bytes = encode_integer_to_length( ((char *) this->FixedHeader->addr) + 1, this->PayloadLength);
-    this->PacketLength = this->ControlPacket->Length - sizeof(FixedHeader) + remaining_length_bytes + 1;
+    this->PacketLength = this->PayloadLength + remaining_length_bytes + 1;
     this->FixedHeader->size = remaining_length_bytes + 1;
+    this->PacketData = calloc(1, this->PacketLength);
 
     while(array != NULL)
     {
@@ -142,7 +137,6 @@ char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this)
 
 int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int topic_length)
 {
-    FixedHeader* fixedHeader = (FixedHeader*) this->FixedHeader->addr;
     Payload* topic_payload = calloc(1, sizeof(short) + topic_length);
 
     topic_payload->length = htons(topic_length);
@@ -153,8 +147,6 @@ int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int
 
 int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int msg_length)
 {
-    FixedHeader* fixedHeader = (FixedHeader*) this->FixedHeader->addr;
-
     this->PayloadStart  = this->ControlPacket->AddByteArray(this->ControlPacket, (char *) msg_string, msg_length);
     this->PayloadLength += this->PayloadStart->size;
 }
