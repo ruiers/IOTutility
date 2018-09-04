@@ -293,19 +293,14 @@ void main()
 {
     MQTT_Session* Session = MQTT_SessionCreate("198.41.30.241", 1883);
     char value[10];
-    int  count = 16383;
 
-    char* testdata = malloc(2097152);
-
-    memset(testdata, 'a', 2097152);
     Session->Connect(Session);
-    printf("connected\n");
+    Session->Subscribe(Session, "#");
 
-    Session->Publish(Session, "wuhan/test", testdata, 2097152);
-    while (++count)
+    while (1)
     {
-        sprintf(value, "%d", count);
-        Session->Publish(Session, "wuhan/test", value, strlen(value));
+        Session->Session->Receive( Session->Session, value);
+        printf("%s\n", value);
         sleep(1);
     }
 

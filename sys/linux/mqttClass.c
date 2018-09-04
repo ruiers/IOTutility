@@ -93,13 +93,7 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
         break;
 
     case PUBLISH:
-        fixedHeader = (FixedHeader*) calloc(1, 5);
-        ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
-        ((FixedHeader*) fixedHeader)->remaining_length[0] = 0;
-
-        packet->FixedHeader = packet->ControlPacket->AddByteArray(packet->ControlPacket, (char *) fixedHeader, sizeof(FixedHeader));
-        break;
-
+    case SUBSCRIBE:
     case DISCONNECT:
         fixedHeader = (FixedHeader*) calloc(1, 5);
         ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
@@ -193,6 +187,30 @@ int MQTT_SessionPublish(MQTT_Session* this, char* topic, char* message, int leng
     this->Status = STA_CONNECTED;
 }
 
+int MQTT_SessionSubscribe(MQTT_Session* this, char* topic)
+{
+    MQTT_ControlPacket*  mqttSubscribe = MQTT_ControlPacketCreate(SUBSCRIBE);
+    MQTT_ACKPacket       mqttACK;
+    char                 Requested_QoS = (0);
+    short                message_identifier = htons(1);
+    short                topic_len = htons(strlen(topic));
+
+    if (this->Status != STA_CONNECTED)
+        return -1;
+
+    this->Status = STA_WAITING_ACK;
+    *(mqttSubscribe->FixedHeader->addr) |= 0x02;
+    MQTT_ControlPacketSetMessage(mqttSubscribe, (char *) &message_identifier, sizeof(short));
+    MQTT_ControlPacketSetMessage(mqttSubscribe, (char *) &topic_len, sizeof(short));
+    MQTT_ControlPacketSetMessage(mqttSubscribe, topic, strlen(topic));
+    MQTT_ControlPacketSetMessage(mqttSubscribe, &Requested_QoS, 1);
+    MQTT_ControlPacketGetPacketData(mqttSubscribe);
+    this->Session->Send(this->Session, mqttSubscribe->PacketData, mqttSubscribe->PacketLength);
+    //this->Connection->Receive(this->Connection, (char *) &mqttACK);
+
+    this->Status = STA_CONNECTED;
+}
+
 MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum)
 {
     MQTT_Session* session = calloc(1, sizeof(MQTT_Session));
@@ -205,6 +223,7 @@ MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum)
     session->Connect    = MQTT_SessionConnect;
     session->Disconnect = MQTT_SessionDisonnect;
     session->Publish    = MQTT_SessionPublish;
+    session->Subscribe  = MQTT_SessionSubscribe;
     session->Status     = STA_CREATED;
 
     return session;
