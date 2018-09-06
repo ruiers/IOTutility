@@ -5,7 +5,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
-#include <stdbool.h>
 #include <unistd.h>
 
 typedef struct TcpClient_T

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <netinet/in.h>
-#include "linux/mqttClass.h"
+#include "mqttClass.h"
 
 int client_id_generate(char* client_id, const char *id_base)
 {
@@ -59,15 +59,13 @@ int encode_integer_to_length(char* remaining_length, int value)
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
 {
     MQTT_ControlPacket* packet = calloc(1, sizeof(MQTT_ControlPacket));
-
-    packet->ControlPacket = MemoryStreamCreate();
-
     int   length_of_payload = 0;
     int   remaining_length_bytes = 0;
     void* fixedHeader = NULL;
     void* variableHeader = NULL;
     void* PayloadStart = NULL;
 
+    packet->ControlPacket = MemoryStreamCreate();
     packet->PacketType = PacketType;
 
     switch (packet->PacketType)

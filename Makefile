@@ -1,7 +1,7 @@
 CC = gcc
 
-INC_PATH ?= inc/
-CFLAGS = -fPIC -Iinc
+INC_PATH ?= -Iinc/ -Iinc/linux
+CFLAGS = -fPIC $(INC_PATH)
 
 OSTYPE = $(shell uname)
 ifneq (${OSTYPE}, Linux)
@@ -23,10 +23,10 @@ OBJ_THREAD_TEST = thread_test.o
 all: clean $(LIB_UTILITY) $(BIN_THREAD_TEST)
 
 $(LIB_UTILITY): $(SYS_OBJS)
-	$(CC) -o $(LIB_UTILITY) $(SYS_OBJS) -fPIC -shared -lpthread
+	$(CC) -o $(LIB_UTILITY) $(SYS_OBJS) $(CFLAGS) -fPIC -shared -lpthread
 
 $(BIN_THREAD_TEST): $(OBJ_THREAD_TEST)
-	$(CC) -o $(BIN_THREAD_TEST) $(OBJ_THREAD_TEST) -lpthread -L./ -lutility -Wl,-rpath=.
+	$(CC) -o $(BIN_THREAD_TEST) $(OBJ_THREAD_TEST) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
 
 clean:
 	-rm -f $(shell find . -name "*.[o]")

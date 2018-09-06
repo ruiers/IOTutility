@@ -1,10 +1,13 @@
 #include <stdio.h>
-#include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include "linux/UdpClient.h"
-#include "linux/thread.h"
+#include "UdpClient.h"
+#include "thread.h"
+#ifdef OS_VXWORKS
+#include <sockLib.h>
+#include <inetLib.h>
+#endif
 
 void udpClientConnect(UdpClient* this, char* ipStr, int portNum)
 {
@@ -61,10 +64,11 @@ void udpClientSendto(UdpClient* this, char* data_addr, int data_len, char* ipStr
 
 int udpClientReceive(UdpClient* this, char* data_addr)
 {
+    socklen_t len = sizeof(this->destAddr);
+
     if (this->Active < 1)
         return -1;
 
-    socklen_t len = sizeof(this->destAddr);
     return recvfrom(this->Client, (caddr_t) data_addr, 1500, 0, (struct sockaddr *)&this->destAddr, (int *)&len);
 }
 

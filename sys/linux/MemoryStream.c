@@ -1,12 +1,14 @@
-#include "linux/MemoryStream.h"
+#include "MemoryStream.h"
 
 void* MemoryStreamWrite(MemoryStream this, char* data_addr, int data_len)
 {
+    int i = 0;
+
     if ((data_addr == NULL) || (data_len > (this->Capacity - this->Position)))
         return NULL;
 
     if (data_len < 8)
-        for (int i = 0; i < data_len; i++)
+        for (i = 0; i < data_len; i++)
             *(this->Memory + this->Position + i) = *(data_addr + i);
     else
         memcpy(this->Memory + this->Position, data_addr, data_len);

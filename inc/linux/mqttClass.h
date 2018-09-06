@@ -1,8 +1,8 @@
 #ifndef __INC_LINUX_MQTTCLASS__
 #define __INC_LINUX_MQTTCLASS__
 
-#include "linux/MemoryStream.h"
-#include "linux/TcpClass.h"
+#include "MemoryStream.h"
+#include "TcpClass.h"
 
 #define PROTOCOL_NAME_v31 "MQIsdp"
 #define PROTOCOL_VERSION_v31 3
