@@ -289,19 +289,34 @@ void main()
 
 #endif
 
+void* fetchingWork(void* arg)
+{
+    MQTT_Session* Session = (MQTT_Session*) arg;
+    while(1)
+        Session->Fetch(Session);
+
+}
+
 void main()
 {
     MQTT_Session* Session = MQTT_SessionCreate("198.41.30.241", 1883);
-    char value[1500];
+    char keep_going = 'c';
 
     Session->Connect(Session);
-    Session->Subscribe(Session, "#");
+    Session->Subscribe(Session, "wuhan/#");
 
-    while (1)
+    taskCreate(fetchingWork, Session);
+
+    while (keep_going)
     {
-        Session->Session->Receive( Session->Session, value, 1500);
-        printf("%s\n", value);
-        sleep(1);
+        keep_going = getchar();
+
+        if (keep_going == 'z')
+            break;
+
+        if (keep_going == 'a')
+            Session->Publish(Session, "wuhan/test", "hello", 5);
+
     }
 
     Session->Disconnect(Session);

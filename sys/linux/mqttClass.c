@@ -53,7 +53,27 @@ int encode_integer_to_length(char* remaining_length, int value)
     }
     while (X > 0);
 
-    return bytes_total;
+    return (bytes_total);
+}
+
+int decode_length_to_interger(char* remaining_length, int *value)
+{
+    char encodedByte;
+    int  bytes_total = 0, multiplier = 1;
+
+    do
+    {
+        encodedByte = remaining_length[bytes_total++];
+        *value += (encodedByte & 127) * multiplier;
+        multiplier *= 128;
+        if ( multiplier > 128*128*128 )
+            return -1;
+
+        remaining_length[bytes_total++] = encodedByte;
+    }
+    while ( (encodedByte & 128) != 0 );
+
+    return (bytes_total - 1);
 }
 
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
@@ -209,6 +229,27 @@ int MQTT_SessionSubscribe(MQTT_Session* this, char* topic)
     this->Status = STA_CONNECTED;
 }
 
+int MQTT_SessionFetch(MQTT_Session* this)
+{
+    char tcp_data[1500], *topic;
+    int total_len = 0, remain_len = 0, topic_len = 0, remain_len_bytes = 0, i = 0;
+
+    memset(tcp_data, 0x0, 1500);
+    this->Session->Receive(this->Session, tcp_data, 1500);
+    remain_len_bytes = decode_length_to_interger(tcp_data + 1, &remain_len);
+    topic_len = tcp_data[1+remain_len_bytes + 1];
+    total_len = remain_len + remain_len_bytes + 1;
+
+    topic = malloc(topic_len + 1);
+    strncpy(topic, tcp_data + 1 + remain_len_bytes + 2, topic_len);
+    if (tcp_data[0] == 0x30)
+    {
+        printf("remain_len:%4d topic len:%4d total len:%4d\n", remain_len, topic_len, total_len);
+        printf("topic   :%s\n", topic);
+        printf("message :%s\n", tcp_data + 1 + remain_len_bytes + 2 + topic_len);
+    }
+}
+
 MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum)
 {
     MQTT_Session* session = calloc(1, sizeof(MQTT_Session));
@@ -222,6 +263,7 @@ MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum)
     session->Disconnect = MQTT_SessionDisonnect;
     session->Publish    = MQTT_SessionPublish;
     session->Subscribe  = MQTT_SessionSubscribe;
+    session->Fetch      = MQTT_SessionFetch;
     session->Status     = STA_CREATED;
 
     return session;
