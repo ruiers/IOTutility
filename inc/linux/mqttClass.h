@@ -99,7 +99,7 @@ typedef struct mqtt_control_session
     int (*Disconnect) (struct mqtt_control_session* this);
     int (*Publish)    (struct mqtt_control_session* this, char* topic, char* message, int length);
     int (*Subscribe)  (struct mqtt_control_session* this, char* topic);
-    int (*Fetch)      (struct mqtt_control_session* this);
+    int (*Fetch)      (struct mqtt_control_session* this, MemoryStream topic_and_message);
 } MQTT_Session;
 
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType);

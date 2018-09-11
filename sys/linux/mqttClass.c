@@ -229,25 +229,43 @@ int MQTT_SessionSubscribe(MQTT_Session* this, char* topic)
     this->Status = STA_CONNECTED;
 }
 
-int MQTT_SessionFetch(MQTT_Session* this)
+int MQTT_SessionFetch(MQTT_Session* this, MemoryStream topMsg)
 {
-    char tcp_data[1500], *topic;
-    int total_len = 0, remain_len = 0, topic_len = 0, remain_len_bytes = 0, i = 0;
+    char *tcp_data;
+    int total_len = 0, remain_len = 0, remain_len_bytes = 0, i = 0;
+    int topic_len = 0, message_len = 0;
+    MemoryByteArray* topic = NULL, *message = NULL;
 
-    memset(tcp_data, 0x0, 1500);
-    this->Session->Receive(this->Session, tcp_data, 1500);
+    tcp_data = calloc(1, 5);
+    this->Session->Receive(this->Session, tcp_data, 5);
     remain_len_bytes = decode_length_to_interger(tcp_data + 1, &remain_len);
-    topic_len = tcp_data[1+remain_len_bytes + 1];
-    total_len = remain_len + remain_len_bytes + 1;
 
-    topic = malloc(topic_len + 1);
-    strncpy(topic, tcp_data + 1 + remain_len_bytes + 2, topic_len);
+    total_len = remain_len + remain_len_bytes + 1;
+    tcp_data = realloc(tcp_data, total_len);
+    this->Session->Receive(this->Session, tcp_data + 5, total_len - 5);
+    topic_len = tcp_data[1+remain_len_bytes + 1];
+    message_len = total_len - (1 + remain_len_bytes + 2 + topic_len);
+
+    if ( (total_len < 0) || (topic_len < 0) || (message_len < 0) )
+    {
+        //printf("total len:%d topic len:%d message len:%d\n", total_len, topic_len, message_len);
+        free(tcp_data);
+        return -1;
+    }
+
     if (tcp_data[0] == 0x30)
     {
-        printf("remain_len:%4d topic len:%4d total len:%4d\n", remain_len, topic_len, total_len);
-        printf("topic   :%s\n", topic);
-        printf("message :%s\n", tcp_data + 1 + remain_len_bytes + 2 + topic_len);
+        if ( (topic_len + message_len + 1 + 2 + remain_len_bytes) > total_len )
+        {
+            printf("length error\n");
+            free(tcp_data);
+            return -1;
+        }
+        topic = topMsg->AddByteArray(topMsg, tcp_data + 1 + remain_len_bytes + 2, topic_len);
+        message = topMsg->AddByteArray(topMsg, tcp_data + total_len - message_len, message_len);
     }
+
+    free(tcp_data);
 }
 
 MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum)

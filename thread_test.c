@@ -292,8 +292,23 @@ void main()
 void* fetchingWork(void* arg)
 {
     MQTT_Session* Session = (MQTT_Session*) arg;
+
+    MemoryStream topic_and_message =  MemoryStreamCreate();
+    MemoryByteArray* topic_or_message = NULL;
+
     while(1)
-        Session->Fetch(Session);
+    {
+        Session->Fetch(Session, topic_and_message);
+
+        if ( topic_and_message->Length > 0 )
+        {
+            topic_or_message = topic_and_message->GetByteArray(topic_and_message);
+            printf("topic   %4d:%s\n", topic_or_message->size, topic_or_message->addr);
+            topic_or_message = topic_and_message->NextByteArray(topic_or_message);
+            printf("message %4d:%s\n",  topic_or_message->size, topic_or_message->addr);
+            topic_and_message->EmptyByteArray(topic_and_message);
+        }
+    }
 
 }
 
@@ -303,7 +318,7 @@ void main()
     char keep_going = 'c';
 
     Session->Connect(Session);
-    Session->Subscribe(Session, "wuhan/#");
+    Session->Subscribe(Session, "#");
 
     taskCreate(fetchingWork, Session);
 
