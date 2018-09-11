@@ -18,7 +18,7 @@ typedef struct TcpClient_T
     void (*Connect) (struct TcpClient_T* this, char* ipStr, int portNum);
     void (*Disconnect) (struct TcpClient_T* this);
     int  (*Send)    (struct TcpClient_T* this, char* data_addr, int data_len);
-    int  (*Receive) (struct TcpClient_T* this, char* data_addr);
+    int  (*Receive) (struct TcpClient_T* this, char* data_addr, int data_len);
 } TcpClient;
 
 TcpClient* tcpClientCreate(char* serverIP, int serverPort);

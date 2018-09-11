@@ -45,9 +45,9 @@ int tcpClientSend(TcpClient* this, char* data_addr, int data_len)
         return 0;
 }
 
-int tcpClientReceive(TcpClient* this, char* data_addr)
+int tcpClientReceive(TcpClient* this, char* data_addr, int data_len)
 {
-    return read(this->Client, data_addr, 1500);
+    return read(this->Client, data_addr, data_len);
 }
 
 TcpClient* tcpClientCreate(char* serverIP, int serverPort)

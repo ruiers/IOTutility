@@ -292,14 +292,14 @@ void main()
 void main()
 {
     MQTT_Session* Session = MQTT_SessionCreate("198.41.30.241", 1883);
-    char value[10];
+    char value[1500];
 
     Session->Connect(Session);
     Session->Subscribe(Session, "#");
 
     while (1)
     {
-        Session->Session->Receive( Session->Session, value);
+        Session->Session->Receive( Session->Session, value, 1500);
         printf("%s\n", value);
         sleep(1);
     }

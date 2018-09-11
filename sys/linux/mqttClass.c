@@ -151,7 +151,7 @@ int MQTT_SessionConnect(MQTT_Session* this)
     this->Status = STA_WAITING_ACK;
     MQTT_ControlPacketGetPacketData(mqttConnect);
     this->Session->Send(this->Session, mqttConnect->PacketData, mqttConnect->PacketLength);
-    this->Session->Receive(this->Session, (char *) &mqttACK);
+    this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
 
     if ((mqttACK.type_and_flag == CONNACK) && (mqttACK.ack_code[1] == CONNACK_ACCEPTED))
         this->Status = STA_CONNECTED;
