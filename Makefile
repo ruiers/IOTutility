@@ -39,3 +39,15 @@ clean:
 	-rm -f $(shell find . -name "*.[o]")
 	-rm -f *.bin
 
+prepare:
+	-find . -name "*.c" | xargs  astyle --style=allman
+	-find . -name "*.h" | xargs  astyle --style=allman
+	-find . -name "*.c" | xargs dos2unix
+	-find . -name "*.h" | xargs dos2unix
+
+finish:
+	-find . -name "*.c" | xargs dos2unix
+	-find . -name "*.h" | xargs dos2unix
+	-find . -name "*.c" | xargs chmod a+w
+	-find . -name "*.h" | xargs chmod a+w
+

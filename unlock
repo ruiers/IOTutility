@@ -1,4 +1,0 @@
-find . -name "*.c" | xargs dos2unix
-find . -name "*.h" | xargs dos2unix
-find . -name "*.c" | xargs chmod a+w
-find . -name "*.h" | xargs chmod a+w        
