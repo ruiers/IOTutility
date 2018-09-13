@@ -30,7 +30,7 @@ $(LIB_UTILITY): $(LIB_OBJS)
 	$(CC) -o $(LIB_UTILITY) $(LIB_OBJS) $(CFLAGS) -fPIC -shared -lpthread
 
 $(APP_OBJ): $(APP_SRC)
-	$(CC) -c $(APP_SRC) $(CFLAGS) -fPIC -shared -lpthread
+	$(CC) -c $(APP_SRC) $(CFLAGS)
 
 $(BIN_MQTT_CLIENT): 
 	$(CC) -o $(BIN_MQTT_CLIENT) $(OBJ_MQTT_CLIENT) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
