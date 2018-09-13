@@ -13,8 +13,8 @@ endif
 LIB_PTHREAD = -lpthread
 LIBS_LD = $(LIB_PTHREAD)
 
-SYS_SRCS = $(foreach d, sys/linux, $(wildcard $(addprefix $(d)/*, .c)))
-SYS_OBJS = $(addsuffix .o, $(basename $(SYS_SRCS)))
+LIB_SRCS = $(foreach d, lib/linux, $(wildcard $(addprefix $(d)/*, .c)))
+LIB_OBJS = $(addsuffix .o, $(basename $(LIB_SRCS)))
 
 LIB_UTILITY = libutility.so
 BIN_THREAD_TEST = thread_test.bin
@@ -22,8 +22,8 @@ OBJ_THREAD_TEST = thread_test.o
 
 all: clean $(LIB_UTILITY) $(BIN_THREAD_TEST)
 
-$(LIB_UTILITY): $(SYS_OBJS)
-	$(CC) -o $(LIB_UTILITY) $(SYS_OBJS) $(CFLAGS) -fPIC -shared -lpthread
+$(LIB_UTILITY): $(LIB_OBJS)
+	$(CC) -o $(LIB_UTILITY) $(LIB_OBJS) $(CFLAGS) -fPIC -shared -lpthread
 
 $(BIN_THREAD_TEST): $(OBJ_THREAD_TEST)
 	$(CC) -o $(BIN_THREAD_TEST) $(OBJ_THREAD_TEST) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
