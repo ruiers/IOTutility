@@ -16,17 +16,24 @@ LIBS_LD = $(LIB_PTHREAD)
 LIB_SRCS = $(foreach d, lib/linux, $(wildcard $(addprefix $(d)/*, .c)))
 LIB_OBJS = $(addsuffix .o, $(basename $(LIB_SRCS)))
 
-LIB_UTILITY = libutility.so
-BIN_THREAD_TEST = thread_test.bin
-OBJ_THREAD_TEST = thread_test.o
+APP_SRCS = $(foreach d, app, $(wildcard $(addprefix $(d)/*, .c)))
+APP_OBJS = $(addsuffix .o, $(basename $(APP_SRCS)))
 
-all: clean $(LIB_UTILITY) $(BIN_THREAD_TEST)
+LIB_UTILITY = libutility.so
+
+BIN_MQTT_CLIENT = mqtt_client.bin
+OBJ_MQTT_CLIENT = app/mqtt_client.o
+
+all: clean $(LIB_UTILITY) $(APP_OBJS) 
 
 $(LIB_UTILITY): $(LIB_OBJS)
 	$(CC) -o $(LIB_UTILITY) $(LIB_OBJS) $(CFLAGS) -fPIC -shared -lpthread
 
-$(BIN_THREAD_TEST): $(OBJ_THREAD_TEST)
-	$(CC) -o $(BIN_THREAD_TEST) $(OBJ_THREAD_TEST) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
+$(APP_OBJ): $(APP_SRC)
+	$(CC) -c $(APP_SRC) $(CFLAGS) -fPIC -shared -lpthread
+
+$(BIN_MQTT_CLIENT): 
+	$(CC) -o $(BIN_MQTT_CLIENT) $(OBJ_MQTT_CLIENT) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
 
 clean:
 	-rm -f $(shell find . -name "*.[o]")
