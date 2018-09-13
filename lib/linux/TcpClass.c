@@ -1,9 +1,8 @@
 #include <stdio.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 #include "TcpClass.h"
-#include "thread.h"
 #ifdef OS_VXWORKS
 #include <sockLib.h>
 #include <inetLib.h>

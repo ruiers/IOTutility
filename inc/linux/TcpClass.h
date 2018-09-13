@@ -1,11 +1,7 @@
 #ifndef __INC_LINUX_TCPCLASS__
 #define __INC_LINUX_TCPCLASS__
 
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <unistd.h>
 
 typedef struct TcpClient_T
 {

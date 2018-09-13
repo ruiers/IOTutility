@@ -1,3 +1,6 @@
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 #include "MemoryStream.h"
 
 void* MemoryStreamWrite(MemoryStream this, char* data_addr, int data_len)
