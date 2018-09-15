@@ -1,10 +1,12 @@
 #include <stdio.h>
-#include <sys/sendfile.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <stdlib.h>
-#include "linux/TcpClass.h"
-#include "linux/thread.h"
+#include <unistd.h>
+#include <arpa/inet.h>
+#include "TcpClass.h"
+#ifdef OS_VXWORKS
+#include <sockLib.h>
+#include <inetLib.h>
+#endif
 
 void tcpClientConnect(TcpClient* this, char* ipStr, int portNum)
 {
@@ -20,7 +22,7 @@ void tcpClientConnect(TcpClient* this, char* ipStr, int portNum)
     else
     {
         this->Connected = 0;
-        printf("%s: connect to %s at %d failed\n", __func__, inet_ntoa(this->servAddr.sin_addr), this->servAddr.sin_port);
+        printf("%s: connect to %s at %d failed\n", __func__, inet_ntoa(this->servAddr.sin_addr), ntohs(this->servAddr.sin_port));
         perror("");
         close(this->Client);
     }
@@ -42,9 +44,9 @@ int tcpClientSend(TcpClient* this, char* data_addr, int data_len)
         return 0;
 }
 
-int tcpClientReceive(TcpClient* this, char* data_addr)
+int tcpClientReceive(TcpClient* this, char* data_addr, int data_len)
 {
-    return read(this->Client, data_addr, 1500);
+    return read(this->Client, data_addr, data_len);
 }
 
 TcpClient* tcpClientCreate(char* serverIP, int serverPort)

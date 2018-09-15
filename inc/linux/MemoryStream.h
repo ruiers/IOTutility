@@ -1,9 +1,6 @@
 #ifndef __INC_LINUX_MEMORYSTREAM__
 #define __INC_LINUX_MEMORYSTREAM__
 #include <sys/queue.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
 
 STAILQ_HEAD(memory_list_head, MemoryBytes);
 

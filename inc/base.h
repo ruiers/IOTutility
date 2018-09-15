@@ -1,11 +1,11 @@
 #ifdef OS_LINUX
-#include "./linux/thread.h"
-#include "./linux/connect.h"
-#include "./linux/cache.h"
-#include "./linux/MemoryStream.h"
-#include "./linux/UdpClient.h"
-#include "linux/TcpClass.h"
-#include "linux/mqttClass.h"
+#include "thread.h"
+#include "connect.h"
+#include "cache.h"
+#include "MemoryStream.h"
+#include "UdpClient.h"
+#include "TcpClass.h"
+#include "mqttClass.h"
 #endif
 
 #ifdef FN_DEBUG

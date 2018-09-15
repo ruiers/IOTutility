@@ -1,7 +1,8 @@
 #ifndef __INC_LINUX_MQTTCLASS__
 #define __INC_LINUX_MQTTCLASS__
 
-#include "linux/MemoryStream.h"
+#include "MemoryStream.h"
+#include "TcpClass.h"
 
 #define PROTOCOL_NAME_v31 "MQIsdp"
 #define PROTOCOL_VERSION_v31 3
@@ -37,6 +38,15 @@
 #define PINGRESP 0xD0
 #define DISCONNECT 0xE0
 
+enum
+{
+    STA_CREATED = 0x1,
+    STA_CONNECTED,
+    STA_WAITING_ACK,
+    STA_CONNECT_NO_ACK,
+    STA_PUBLISH_NO_ACK,
+} MQTT_Status;
+
 typedef struct FixedHeader
 {
     char type_and_flag;
@@ -58,10 +68,18 @@ typedef struct Payload
     char  message[0];
 } Payload;
 
+typedef struct ACK_Code
+{
+    char type_and_flag;
+    char remaining_length;
+    char ack_code[2];
+} MQTT_ACKPacket;
+
 typedef struct mqtt_control_packet
 {
     int              PacketType;
     int              PacketLength;
+    int              PayloadLength;
     char*            PacketData;
 
     MemoryStream     ControlPacket;
@@ -70,8 +88,24 @@ typedef struct mqtt_control_packet
     MemoryByteArray* PayloadStart;
 } MQTT_ControlPacket;
 
+typedef struct mqtt_control_session
+{
+    int        Status;
+    char       ServerIPString[16];
+    int        ServerPortNumber;
+    TcpClient* Session;
+
+    int (*Connect)    (struct mqtt_control_session* this);
+    int (*Disconnect) (struct mqtt_control_session* this);
+    int (*Publish)    (struct mqtt_control_session* this, char* topic, char* message, int length);
+    int (*Subscribe)  (struct mqtt_control_session* this, char* topic);
+    int (*Fetch)      (struct mqtt_control_session* this, MemoryStream topic_and_message);
+} MQTT_Session;
+
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType);
 char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this);
 int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int topic_length);
 int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int msg_length);
+
+MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum);
 #endif
