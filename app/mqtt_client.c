@@ -2,7 +2,8 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "base.h"
+#include "thread.h"
+#include "mqttClass.h"
 
 void* fetchingWork(void* arg)
 {
