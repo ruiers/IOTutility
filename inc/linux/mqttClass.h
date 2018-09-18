@@ -49,7 +49,7 @@ enum
 
 typedef struct FixedHeader
 {
-    char type_and_flag;
+    unsigned char type_and_flag;
     char remaining_length[4];
 } FixedHeader;
 
@@ -70,7 +70,7 @@ typedef struct Payload
 
 typedef struct ACK_Code
 {
-    char type_and_flag;
+    unsigned char type_and_flag;
     char remaining_length;
     char ack_code[2];
 } MQTT_ACKPacket;

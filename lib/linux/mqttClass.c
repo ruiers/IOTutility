@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/time.h>
 #include <stdlib.h>
 #include <string.h>
 #include <netinet/in.h>
@@ -79,6 +80,23 @@ int decode_length_to_interger(char* remaining_length, int *value)
     return (bytes_total - 1);
 }
 
+int setTcpClientTimeout(int sock_fd, int ns_timeout)
+{
+    struct timeval timeout;
+    int status = 0;
+    timeout.tv_sec  = ns_timeout;
+    timeout.tv_usec = 0;
+
+    status = setsockopt(sock_fd,SOL_SOCKET,SO_SNDTIMEO,&timeout,sizeof(timeout));
+
+    if (status != 0)
+        return status;
+
+    status = setsockopt(sock_fd,SOL_SOCKET,SO_RCVTIMEO,&timeout,sizeof(timeout));
+
+    return status;
+}
+
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
 {
     MQTT_ControlPacket* packet = calloc(1, sizeof(MQTT_ControlPacket));
@@ -116,6 +134,7 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType)
     case PUBLISH:
     case SUBSCRIBE:
     case DISCONNECT:
+    case PINGREQ:
         fixedHeader = (FixedHeader*) calloc(1, 5);
         ((FixedHeader*) fixedHeader)->type_and_flag = packet->PacketType;
         ((FixedHeader*) fixedHeader)->remaining_length[0] = 0;
@@ -173,6 +192,7 @@ int MQTT_SessionConnect(MQTT_Session* this)
 
     this->Status = STA_WAITING_ACK;
     MQTT_ControlPacketGetPacketData(mqttConnect);
+    setTcpClientTimeout(this->Session->Client, 60);
     this->Session->Send(this->Session, mqttConnect->PacketData, mqttConnect->PacketLength);
     this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
 
@@ -203,8 +223,8 @@ int MQTT_SessionPublish(MQTT_Session* this, char* topic, char* message, int leng
     MQTT_ControlPacketSetMessage(mqttPublish, message, length);
     MQTT_ControlPacketGetPacketData(mqttPublish);
     this->Session->Send(this->Session, mqttPublish->PacketData, mqttPublish->PacketLength);
-    //this->Connection->Receive(this->Connection, (char *) &mqttACK);
-
+    // this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
+    // FixMe I do not know why it is blocked here.
     this->Status = STA_CONNECTED;
 }
 
@@ -227,9 +247,29 @@ int MQTT_SessionSubscribe(MQTT_Session* this, char* topic)
     MQTT_ControlPacketSetMessage(mqttSubscribe, &Requested_QoS, 1);
     MQTT_ControlPacketGetPacketData(mqttSubscribe);
     this->Session->Send(this->Session, mqttSubscribe->PacketData, mqttSubscribe->PacketLength);
-    //this->Connection->Receive(this->Connection, (char *) &mqttACK);
-
+    // this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
+    // FixMe I do not know why it is blocked here.
     this->Status = STA_CONNECTED;
+}
+
+int MQTT_SessionPingReq(MQTT_Session* this)
+{
+    MQTT_ControlPacket*  mqttPingReq = MQTT_ControlPacketCreate(PINGREQ);
+    MQTT_ACKPacket       mqttACK;
+
+    if (this->Status != STA_CONNECTED)
+        return -1;
+
+    this->Status = STA_WAITING_ACK;
+
+    MQTT_ControlPacketGetPacketData(mqttPingReq);
+    this->Session->Send(this->Session, mqttPingReq->PacketData, mqttPingReq->PacketLength);
+    this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
+
+    if (mqttACK.type_and_flag == PINGRESP)
+        this->Status = STA_CONNECTED;
+    else
+        this->Status = STA_WAITING_ACK;
 }
 
 int MQTT_SessionFetch(MQTT_Session* this, MemoryStream topMsg)
@@ -237,6 +277,7 @@ int MQTT_SessionFetch(MQTT_Session* this, MemoryStream topMsg)
     char *tcp_data;
     int total_len = 0, remain_len = 0, remain_len_bytes = 0, i = 0;
     int topic_len = 0, message_len = 0;
+    int tcp_status = 0;
     MemoryByteArray* topic = NULL, *message = NULL;
 
     tcp_data = calloc(1, 5);
@@ -245,7 +286,13 @@ int MQTT_SessionFetch(MQTT_Session* this, MemoryStream topMsg)
 
     total_len = remain_len + remain_len_bytes + 1;
     tcp_data = realloc(tcp_data, total_len);
-    this->Session->Receive(this->Session, tcp_data + 5, total_len - 5);
+    tcp_status = this->Session->Receive(this->Session, tcp_data + 5, total_len - 5);
+
+    if (tcp_status == -1)
+    {
+        MQTT_SessionPingReq(this);
+    }
+
     topic_len = tcp_data[1+remain_len_bytes + 1];
     message_len = total_len - (1 + remain_len_bytes + 2 + topic_len);
 
