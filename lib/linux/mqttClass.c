@@ -208,12 +208,14 @@ int MQTT_SessionDisonnect(MQTT_Session* this)
 
     MQTT_ControlPacketGetPacketData(mqttDisconnect);
     this->Session->Send(this->Session, mqttDisconnect->PacketData, mqttDisconnect->PacketLength);
+    this->Session->Disconnect(this->Session);
 }
 
 int MQTT_SessionPublish(MQTT_Session* this, char* topic, char* message, int length)
 {
     MQTT_ControlPacket*  mqttPublish = MQTT_ControlPacketCreate(PUBLISH);
     MQTT_ACKPacket       mqttACK;
+    int                  mqttStatus;
 
     if (this->Status != STA_CONNECTED)
         return -1;
@@ -222,7 +224,14 @@ int MQTT_SessionPublish(MQTT_Session* this, char* topic, char* message, int leng
     MQTT_ControlPacketSetTopic(mqttPublish, topic, strlen(topic));
     MQTT_ControlPacketSetMessage(mqttPublish, message, length);
     MQTT_ControlPacketGetPacketData(mqttPublish);
-    this->Session->Send(this->Session, mqttPublish->PacketData, mqttPublish->PacketLength);
+    mqttStatus = this->Session->Send(this->Session, mqttPublish->PacketData, mqttPublish->PacketLength);
+
+    if (mqttStatus == -1)
+    {
+        this->Disconnect(this);
+        this->Connect(this);
+        this->Session->Send(this->Session, mqttPublish->PacketData, mqttPublish->PacketLength);
+    }
     // this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
     // FixMe I do not know why it is blocked here.
     this->Status = STA_CONNECTED;
