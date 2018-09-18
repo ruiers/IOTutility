@@ -1,3 +1,5 @@
+#ifndef __INC_LINUX_IEC61850_9_2__
+#define __INC_LINUX_IEC61850_9_2__
 #include "MemoryStream.h"
 
 typedef struct iec61850_9_2_t
@@ -19,3 +21,8 @@ typedef struct iec61850_9_2
     IEC61850_9_2_HEAD *info;
     MemoryStream       data;
 } IEC61850_9_2;
+
+IEC61850_9_2* IEC61850_9_2_Dump(char* org_data, int org_len);
+IEC61850_9_2* IEC61850_9_2_Create(int Length);
+
+#endif
