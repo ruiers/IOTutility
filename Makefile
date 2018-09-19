@@ -32,7 +32,7 @@ $(LIB_UTILITY): $(LIB_OBJS)
 $(APP_OBJ): $(APP_SRC)
 	$(CC) -c $(APP_SRC) $(CFLAGS)
 
-$(BIN_MQTT_CLIENT): 
+$(BIN_MQTT_CLIENT): $(LIB_UTILITY) $(APP_OBJS)
 	$(CC) -o $(BIN_MQTT_CLIENT) $(OBJ_MQTT_CLIENT) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
 
 clean:
