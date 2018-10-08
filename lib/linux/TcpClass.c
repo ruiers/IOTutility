@@ -17,6 +17,11 @@ void tcpClientConnect(TcpClient* this, char* ipStr, int portNum)
     inet_pton(AF_INET, ipStr, &this->servAddr.sin_addr);
     this->servAddr.sin_port = htons(portNum);
 
+    if (0 == this->Client)
+    {
+        this->Client = socket(AF_INET, SOCK_STREAM, 0);
+    }
+
     if (0 == connect(this->Client, (struct sockaddr *)&this->servAddr, sizeof(this->servAddr)))
         this->Connected = 1;
     else
@@ -30,8 +35,13 @@ void tcpClientConnect(TcpClient* this, char* ipStr, int portNum)
 
 void tcpClientDisconnect(TcpClient* this)
 {
-    close(this->Client);
-    this->Connected = 0;
+    if ((this != NULL) && (this->Client != 0))
+    {
+        shutdown(this->Client, SHUT_RDWR);
+        close(this->Client);
+        this->Client = 0;
+        this->Connected = 0;
+    }
 }
 
 int tcpClientSend(TcpClient* this, char* data_addr, int data_len)

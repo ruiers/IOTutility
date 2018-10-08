@@ -24,6 +24,9 @@ LIB_UTILITY = libutility.so
 BIN_MQTT_CLIENT = mqtt_client.bin
 OBJ_MQTT_CLIENT = app/mqtt_client.o
 
+BIN_MPC8377 = mpc8377.bin
+OBJ_MPC8377 = app/mpc8377_network_simulator.o
+
 all: clean $(LIB_UTILITY) $(APP_OBJS) 
 
 $(LIB_UTILITY): $(LIB_OBJS)
@@ -34,6 +37,9 @@ $(APP_OBJ): $(APP_SRC)
 
 $(BIN_MQTT_CLIENT): $(LIB_UTILITY) $(APP_OBJS)
 	$(CC) -o $(BIN_MQTT_CLIENT) $(OBJ_MQTT_CLIENT) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
+
+$(BIN_MPC8377): $(LIB_UTILITY) $(APP_OBJS)
+	$(CC) -o $(BIN_MPC8377) $(OBJ_MPC8377) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
 
 clean:
 	-rm -f $(shell find . -name "*.[o]")

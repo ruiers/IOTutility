@@ -70,7 +70,10 @@ int udpClientReceive(UdpClient* this, char* data_addr, int data_len)
     ret =  recvfrom(this->Client, (caddr_t) data_addr, data_len, 0, (struct sockaddr *)&this->servAddr, (int *)&len);
 
     if (ret > 0)
+    {
+        this->destAddr.sin_addr   = this->servAddr.sin_addr;
         this->Active = 1;
+    }
 
     return ret;
 }
