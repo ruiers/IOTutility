@@ -62,14 +62,17 @@ void udpClientSendto(UdpClient* this, char* data_addr, int data_len, char* ipStr
     }
 }
 
-int udpClientReceive(UdpClient* this, char* data_addr)
+int udpClientReceive(UdpClient* this, char* data_addr, int data_len)
 {
-    socklen_t len = sizeof(this->destAddr);
+    socklen_t len = sizeof(this->servAddr);
+    int ret = 0;
 
-    if (this->Active < 1)
-        return -1;
+    ret =  recvfrom(this->Client, (caddr_t) data_addr, data_len, 0, (struct sockaddr *)&this->servAddr, (int *)&len);
 
-    return recvfrom(this->Client, (caddr_t) data_addr, 1500, 0, (struct sockaddr *)&this->destAddr, (int *)&len);
+    if (ret > 0)
+        this->Active = 1;
+
+    return ret;
 }
 
 UdpClient* udpClientCreate(int portNum)
