@@ -25,7 +25,10 @@ void* tcp_send(void* arg)
     {
         if ((targetTcp != NULL) && targetTcp->Connected)
         {
-            targetTcp->Send(targetTcp, common_message, sizeof(common_message));
+            len = targetTcp->Send(targetTcp, common_message, sizeof(common_message));
+
+            if (len < 0)
+                targetTcp->Disconnect(targetTcp);
         }
 
         sleep(1);
@@ -51,8 +54,8 @@ void* udp_srv(void* arg)
 
         if ('d' == *recved_data)
         {
-			if (targetTcp != NULL)
-				targetTcp->Disconnect(targetTcp);
+            if (targetTcp != NULL)
+                targetTcp->Disconnect(targetTcp);
         }
 
         memset(recved_data, 0x0, sizeof(recved_data));

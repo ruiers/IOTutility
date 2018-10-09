@@ -46,12 +46,17 @@ void tcpClientDisconnect(TcpClient* this)
 
 int tcpClientSend(TcpClient* this, char* data_addr, int data_len)
 {
+    int length = 0;
+
     if (this->Connected)
     {
-        return write(this->Client, data_addr, data_len);
+        length = write(this->Client, data_addr, data_len);
+
+        if (length == data_len)
+            return length;
     }
-    else
-        return 0;
+
+    return -1;
 }
 
 int tcpClientReceive(TcpClient* this, char* data_addr, int data_len)
