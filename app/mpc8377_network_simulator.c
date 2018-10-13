@@ -64,11 +64,25 @@ void* udp_srv(void* arg)
 
 void main()
 {
-
+    int i = 0, len = 0, value = 0, data[10];
     targetUdp = udpClientCreate(5055);
 
     taskCreate(udp_srv, targetUdp);
     taskCreate(tcp_send, targetTcp);
 
+    while (1)
+    {
+        if (targetTcp != NULL)
+        {
+            len = targetTcp->Receive(targetTcp, recved_data, 512);
+            for (i = 0; i < len; i++)
+            {
+                value = *((unsigned char *) recved_data + i);
+                printf("%02x", value);
+            }
+            printf("\n");
+        }
+
+    }
     pause();
 }
