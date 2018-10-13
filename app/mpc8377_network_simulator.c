@@ -74,11 +74,17 @@ void main()
     {
         if (targetTcp != NULL)
         {
+            if (targetTcp->Connected == 0)
+            {
+                sleep(1);
+                continue;
+            }
+
             len = targetTcp->Receive(targetTcp, recved_data, 512);
             for (i = 0; i < len; i++)
             {
                 value = *((unsigned char *) recved_data + i);
-                printf("%02x", value);
+                printf("%02x ", value);
             }
             printf("\n");
         }
