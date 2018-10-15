@@ -17,6 +17,17 @@ char recved_data[512];
 TcpClient *targetTcp = NULL;
 UdpClient *targetUdp = NULL;
 
+void  dHex(char *data, int len)
+{
+    int i = 0, value = 0;
+    for (i = 0; i < len; i++)
+    {
+        value = *((unsigned char *) data + i);
+        printf("%02x ", value);
+    }
+    printf("\n");
+}
+
 void* tcp_send(void* arg)
 {
     int len = 0, i;
@@ -81,14 +92,16 @@ void main()
             }
 
             len = targetTcp->Receive(targetTcp, recved_data, 512);
-            for (i = 0; i < len; i++)
+            dHex(recved_data, len);
+
+            for (i = 0; i< len/4; i++)
             {
-                value = *((unsigned char *) recved_data + i);
-                printf("%02x ", value);
+                value = htonl(*((int *) recved_data + i) );
+                printf("%x ", value);
             }
+
             printf("\n");
         }
-
     }
     pause();
 }
