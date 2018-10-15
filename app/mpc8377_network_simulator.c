@@ -17,7 +17,7 @@ char recved_data[512];
 TcpClient *targetTcp = NULL;
 UdpClient *targetUdp = NULL;
 
-void  dHex(char *data, int len)
+void dHex(char *data, int len)
 {
     int i = 0, value = 0;
     for (i = 0; i < len; i++)

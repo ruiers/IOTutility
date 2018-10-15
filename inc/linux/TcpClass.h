@@ -3,20 +3,31 @@
 
 #include <netinet/in.h>
 
-typedef struct TcpClient_T
+typedef struct _TcpClient_
 {
     int   Active;
     int   Available;
     int   Client;
     int   Connected;
-    struct sockaddr_in servAddr;
+    struct sockaddr_in remoteAddr;
+    struct sockaddr_in localAddr;
 
-    void (*Connect) (struct TcpClient_T* this, char* ipStr, int portNum);
-    void (*Disconnect) (struct TcpClient_T* this);
-    int  (*Send)    (struct TcpClient_T* this, char* data_addr, int data_len);
-    int  (*Receive) (struct TcpClient_T* this, char* data_addr, int data_len);
+    void (*Connect) (struct _TcpClient_* this, char* ipStr, int portNum);
+    void (*Disconnect) (struct _TcpClient_* this);
+    int  (*Send)    (struct _TcpClient_* this, char* data_addr, int data_len);
+    int  (*Receive) (struct _TcpClient_* this, char* data_addr, int data_len);
 } TcpClient;
 
 TcpClient* tcpClientCreate(char* serverIP, int serverPort);
 
+typedef struct _TcpListener_
+{
+    int ListenSock;
+    void (*Start) (struct _TcpListener_ *this);
+    void (*Stop) (struct _TcpListener_  *this);
+    TcpClient* (*AcceptTcpClient) (struct _TcpListener_ *this);
+
+} TcpListener;
+
+TcpListener* tcpListenerCreate(char* IPStr, int portNum);
 #endif
