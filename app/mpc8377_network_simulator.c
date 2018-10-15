@@ -17,13 +17,25 @@ char recved_data[512];
 TcpClient *targetTcp = NULL;
 UdpClient *targetUdp = NULL;
 
-void dHex(char *data, int len)
+void hexdump(char *data, int len)
 {
     int i = 0, value = 0;
     for (i = 0; i < len; i++)
     {
         value = *((unsigned char *) data + i);
-        printf("%02x ", value);
+
+        if ((i) % 2 == 0)
+        {
+            printf(" ");
+        }
+
+        if ((i) % 32 == 0)
+        {
+            printf("\n");
+            printf("%p: ", data + i);
+        }
+
+        printf("%02x", value);
     }
     printf("\n");
 }
@@ -92,7 +104,7 @@ void main()
             }
 
             len = targetTcp->Receive(targetTcp, recved_data, 512);
-            dHex(recved_data, len);
+            hexdump(recved_data, len);
 
             for (i = 0; i< len/4; i++)
             {
