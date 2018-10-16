@@ -29,7 +29,7 @@ void hexdump(char *data, int len)
             printf(" ");
         }
 
-        if ((i) % 32 == 0)
+        if ((i) % 16 == 0)
         {
             printf("\n");
             printf("%p: ", data + i);
