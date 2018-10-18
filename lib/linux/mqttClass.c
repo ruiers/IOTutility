@@ -5,6 +5,7 @@
 #include <string.h>
 #include <netinet/in.h>
 #include "mqttClass.h"
+#include "TcpClass.h"
 
 int client_id_generate(char* client_id, const char *id_base)
 {
@@ -344,4 +345,74 @@ MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum)
     session->Status     = STA_CREATED;
 
     return session;
+}
+
+MQTT_Session* MQTT_ServerWaitForSession(MQTT_Server* this)
+{
+    MQTT_Session* session = calloc(1, sizeof(MQTT_Session));
+
+    session->Session = this->listener->AcceptTcpClient(this->listener);
+
+    return session;
+}
+
+void hexdump(char *data, int len)
+{
+    int i = 0, value = 0;
+    for (i = 0; i < len; i++)
+    {
+        value = *((unsigned char *) data + i);
+
+        if ((i) % 2 == 0)
+        {
+            printf(" ");
+        }
+
+        if ((i) % 16 == 0)
+        {
+            printf("\n");
+            printf("%p: ", data + i);
+        }
+
+        printf("%02x", value);
+    }
+    printf("\n");
+}
+
+void MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* session)
+{
+    char data[1500];
+    MQTT_ControlPacket* Packet = calloc(1, sizeof(MQTT_ControlPacket));
+    MQTT_ACKPacket ack;
+
+    Packet->PacketLength = session->Session->Receive(session->Session, data, sizeof(data));
+    Packet->ControlPacket = MemoryStreamCreate();
+    Packet->FixedHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data, 1 + decode_length_to_interger(data + 1, &Packet->RemainLength));
+    printf("%d %d\n", Packet->PacketLength, Packet->RemainLength);
+
+    switch ( *(Packet->FixedHeader->addr) )
+    {
+    case CONNECT:
+        hexdump(Packet->FixedHeader->addr, Packet->FixedHeader->size);
+        ack.type_and_flag = CONNACK;
+        ack.remaining_length = 2;
+        ack.ack_code[1] = CONNACK_ACCEPTED;
+        break;
+    }
+
+    Packet->PacketLength = session->Session->Send(session->Session, (char *) &ack, sizeof(ack));
+}
+
+MQTT_Server* MQTT_ServerCreate(char* ipStr, int portNum)
+{
+    MQTT_Server* server = calloc(1, sizeof(MQTT_Server));
+
+    server->WaitForSession = MQTT_ServerWaitForSession;
+    server->ACKForSession  = MQTT_ServerACKForSession;
+    server->listener   = tcpListenerCreate(ipStr, portNum);
+    server->numSession = 0;
+
+    server->listener->Start(server->listener);
+
+    return server;
 }

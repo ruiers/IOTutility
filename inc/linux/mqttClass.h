@@ -79,6 +79,7 @@ typedef struct mqtt_control_packet
 {
     int              PacketType;
     int              PacketLength;
+    int              RemainLength;
     int              PayloadLength;
     char*            PacketData;
 
@@ -108,4 +109,16 @@ int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int
 int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int msg_length);
 
 MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum);
+
+typedef struct _mqtt_control_server_
+{
+    int   numSession;
+    TcpListener* listener;
+
+    MQTT_Session*   (*WaitForSession) (struct _mqtt_control_server_ *this);
+    void  (*ACKForSession) (struct _mqtt_control_server_ *this, MQTT_Session* session);
+} MQTT_Server;
+
+MQTT_Server* MQTT_ServerCreate(char* ipStr, int portNum);
+
 #endif
