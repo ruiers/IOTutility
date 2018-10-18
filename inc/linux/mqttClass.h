@@ -77,7 +77,7 @@ typedef struct ACK_Code
 
 typedef struct mqtt_control_packet
 {
-    int              PacketType;
+    unsigned char    PacketType;
     int              PacketLength;
     int              RemainLength;
     int              PayloadLength;
@@ -116,7 +116,7 @@ typedef struct _mqtt_control_server_
     TcpListener* listener;
 
     MQTT_Session*   (*WaitForSession) (struct _mqtt_control_server_ *this);
-    void  (*ACKForSession) (struct _mqtt_control_server_ *this, MQTT_Session* session);
+    MQTT_ControlPacket*  (*ACKForSession) (struct _mqtt_control_server_ *this, MQTT_Session* session);
 } MQTT_Server;
 
 MQTT_Server* MQTT_ServerCreate(char* ipStr, int portNum);

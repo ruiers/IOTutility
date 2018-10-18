@@ -35,18 +35,31 @@ void hexdump(char *data, int len)
     printf("\n");
 }
 
-void main(int argc, char** argv)
+void* handleSession(void* arg)
 {
-    mqttSrv = MQTT_ServerCreate("127.0.0.1", 1888);
-
-    int len;
-    MQTT_Session *c = mqttSrv->WaitForSession(mqttSrv);
-
-    printf("%s: connect to %s at %d \n", __func__, inet_ntoa(c->Session->localAddr.sin_addr), ntohs(c->Session->localAddr.sin_port));
+    MQTT_Session *session = (MQTT_Session *) arg;
+    MQTT_ControlPacket *Packet = NULL;
 
     while (1)
     {
-        mqttSrv->ACKForSession(mqttSrv, c);
+        Packet = mqttSrv->ACKForSession(mqttSrv, session);
+
+        if (Packet->PacketType == PUBLISH)
+            printf("topic:%s\nmessage:%s\n", Packet->VariableHeader->addr + 2, Packet->PayloadStart->addr);
+    }
+
+}
+
+void main(int argc, char** argv)
+{
+    mqttSrv = MQTT_ServerCreate("127.0.0.1", 1888);
+    MQTT_Session *session = NULL;
+
+    while (1)
+    {
+        session = mqttSrv->WaitForSession(mqttSrv);
+        printf("%s: connect to %s at %d \n", __func__, inet_ntoa(session->Session->localAddr.sin_addr), ntohs(session->Session->localAddr.sin_port));
+        taskCreate(handleSession, session);
     }
 
     pause();

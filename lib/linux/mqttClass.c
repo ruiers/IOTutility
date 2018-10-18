@@ -379,7 +379,7 @@ void hexdump(char *data, int len)
     printf("\n");
 }
 
-void MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* session)
+MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* session)
 {
     char data[1500];
     MQTT_ControlPacket* Packet = calloc(1, sizeof(MQTT_ControlPacket));
@@ -387,20 +387,30 @@ void MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* session)
 
     Packet->PacketLength = session->Session->Receive(session->Session, data, sizeof(data));
     Packet->ControlPacket = MemoryStreamCreate();
+    Packet->PacketType = *(data);
     Packet->FixedHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data, 1 + decode_length_to_interger(data + 1, &Packet->RemainLength));
-    printf("%d %d\n", Packet->PacketLength, Packet->RemainLength);
 
-    switch ( *(Packet->FixedHeader->addr) )
+    switch (Packet->PacketType)
     {
+    case PINGREQ:
+        ack.type_and_flag = PINGRESP;
+        break;
     case CONNECT:
-        hexdump(Packet->FixedHeader->addr, Packet->FixedHeader->size);
         ack.type_and_flag = CONNACK;
         ack.remaining_length = 2;
         ack.ack_code[1] = CONNACK_ACCEPTED;
+        this->numSession++;
+        break;
+    case PUBLISH:
+        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->PacketLength - Packet->RemainLength,
+                                 data[Packet->PacketLength - Packet->RemainLength + 1] + sizeof(short));
+        Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size + Packet->VariableHeader->size, Packet->RemainLength - Packet->VariableHeader->size);
         break;
     }
 
     Packet->PacketLength = session->Session->Send(session->Session, (char *) &ack, sizeof(ack));
+
+    return Packet;
 }
 
 MQTT_Server* MQTT_ServerCreate(char* ipStr, int portNum)
