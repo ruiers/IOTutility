@@ -46,6 +46,9 @@ void* handleSession(void* arg)
 
         if (Packet->PacketType == PUBLISH)
             printf("topic:%s\nmessage:%s\n", Packet->VariableHeader->addr + 2, Packet->PayloadStart->addr);
+
+        if (Packet->PacketType == DISCONNECT)
+            break;
     }
 
 }

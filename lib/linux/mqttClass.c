@@ -401,6 +401,11 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
         ack.ack_code[1] = CONNACK_ACCEPTED;
         this->numSession++;
         break;
+    case DISCONNECT:
+        ack.type_and_flag = DISCONNECT;
+        ack.remaining_length = 2;
+        this->numSession--;
+        break;
     case PUBLISH:
         Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->PacketLength - Packet->RemainLength,
                                  data[Packet->PacketLength - Packet->RemainLength + 1] + sizeof(short));
