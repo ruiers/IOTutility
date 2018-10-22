@@ -356,29 +356,6 @@ MQTT_Session* MQTT_ServerWaitForSession(MQTT_Server* this)
     return session;
 }
 
-void hexdump(char *data, int len)
-{
-    int i = 0, value = 0;
-    for (i = 0; i < len; i++)
-    {
-        value = *((unsigned char *) data + i);
-
-        if ((i) % 2 == 0)
-        {
-            printf(" ");
-        }
-
-        if ((i) % 16 == 0)
-        {
-            printf("\n");
-            printf("%p: ", data + i);
-        }
-
-        printf("%02x", value);
-    }
-    printf("\n");
-}
-
 MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* session)
 {
     char data[1500];
@@ -413,9 +390,10 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
         break;
     }
 
-    Packet->PacketLength = session->Session->Send(session->Session, (char *) &ack, sizeof(ack));
-
-    return Packet;
+    if( sizeof(ack) == session->Session->Send(session->Session, (char *) &ack, sizeof(ack)))
+        return Packet;
+    else
+        return NULL;
 }
 
 MQTT_Server* MQTT_ServerCreate(char* ipStr, int portNum)
