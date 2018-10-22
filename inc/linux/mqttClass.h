@@ -107,7 +107,8 @@ MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType);
 char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this);
 int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int topic_length);
 int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int msg_length);
-
+int MQTT_SessionPublish(MQTT_Session* this, char* topic, char* message, int length);
+char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this);
 MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum);
 
 typedef struct _mqtt_control_server_
