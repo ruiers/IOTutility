@@ -297,12 +297,12 @@ int MQTT_SessionFetch(MQTT_Session* this, MemoryStream topMsg)
     total_len = remain_len + remain_len_bytes + 1;
     tcp_data = realloc(tcp_data, total_len);
     tcp_status = this->Session->Receive(this->Session, tcp_data + 5, total_len - 5);
-
+    /*
     if (tcp_status == -1)
     {
         MQTT_SessionPingReq(this);
     }
-
+    */
     topic_len = tcp_data[1+remain_len_bytes + 1];
     message_len = total_len - (1 + remain_len_bytes + 2 + topic_len);
 
@@ -366,6 +366,8 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
     Packet->ControlPacket = MemoryStreamCreate();
     Packet->PacketType = *(data);
     Packet->FixedHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data, 1 + decode_length_to_interger(data + 1, &Packet->RemainLength));
+    Packet->ControlPacket->Memory = malloc(Packet->PacketLength);
+    memcpy(Packet->ControlPacket->Memory, data, Packet->PacketLength);
 
     switch (Packet->PacketType)
     {

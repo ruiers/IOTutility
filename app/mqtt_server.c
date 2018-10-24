@@ -23,12 +23,16 @@ void* handleSession(void* arg)
         Packet = mqttSrv->ACKForSession(mqttSrv, session);
 
         if (Packet->PacketType == PUBLISH)
+        {
             printf("topic:%s\nmessage:%s\n", Packet->VariableHeader->addr + 2, Packet->PayloadStart->addr);
+            log_hex(Packet->ControlPacket->Memory, Packet->ControlPacket->Length);
+            session->Session->Send(session->Session, Packet->ControlPacket->Memory, Packet->ControlPacket->Length);
+        }
 
         if (Packet->PacketType == DISCONNECT)
             break;
 
-        log_hex(Packet->FixedHeader->addr, Packet->FixedHeader->size);
+
     }
 }
 
