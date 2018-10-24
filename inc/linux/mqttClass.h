@@ -111,6 +111,8 @@ typedef struct mqtt_control_session
     int (*Fetch)      (struct mqtt_control_session* this, MemoryStream topic_and_message);
 } MQTT_Session;
 
+int encode_integer_to_length(unsigned char* remaining_length, int value);
+int decode_length_to_interger(unsigned char* remaining_length, int *value);
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType);
 char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this);
 int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int topic_length);

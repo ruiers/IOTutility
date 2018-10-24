@@ -7,7 +7,7 @@
 #include "mqttClass.h"
 #include "TcpClass.h"
 
-int client_id_generate(char* client_id, const char *id_base)
+int client_id_generate(unsigned char* client_id, const char *id_base)
 {
     int len;
     char hostname[256];
@@ -39,9 +39,9 @@ int client_id_generate(char* client_id, const char *id_base)
     return strlen(client_id);
 }
 
-int encode_integer_to_length(char* remaining_length, int value)
+int encode_integer_to_length(unsigned char* remaining_length, int value)
 {
-    char std_bytes[4];
+    unsigned char std_bytes[4];
     int  bytes_total = 0, X = value, encodedByte = 0;
 
     memset(std_bytes, 0, sizeof(std_bytes));
@@ -61,10 +61,12 @@ int encode_integer_to_length(char* remaining_length, int value)
     return (bytes_total);
 }
 
-int decode_length_to_interger(char* remaining_length, int *value)
+int decode_length_to_interger(unsigned char* remaining_length, int *value)
 {
-    char encodedByte;
+    unsigned char encodedByte;
     int  bytes_total = 0, multiplier = 1;
+
+    *value = 0;
 
     do
     {
@@ -73,12 +75,10 @@ int decode_length_to_interger(char* remaining_length, int *value)
         multiplier *= 128;
         if ( multiplier > 128*128*128 )
             return -1;
-
-        remaining_length[bytes_total++] = encodedByte;
     }
     while ( (encodedByte & 128) != 0 );
 
-    return (bytes_total - 1);
+    return bytes_total;
 }
 
 int setTcpClientTimeout(int sock_fd, int ns_timeout)
