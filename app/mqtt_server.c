@@ -8,32 +8,10 @@
 #include "TcpClass.h"
 #include "UdpClient.h"
 #include <arpa/inet.h>
+#include "debug.h"
 
 MQTT_Server *mqttSrv = NULL;
 char buf[512] = { 0 };
-
-void hexdump(char *data, int len)
-{
-    int i = 0, value = 0;
-    for (i = 0; i < len; i++)
-    {
-        value = *((unsigned char *) data + i);
-
-        if ((i) % 2 == 0)
-        {
-            printf(" ");
-        }
-
-        if ((i) % 16 == 0)
-        {
-            printf("\n");
-            printf("%p: ", data + i);
-        }
-
-        printf("%02x", value);
-    }
-    printf("\n");
-}
 
 void* handleSession(void* arg)
 {
@@ -49,8 +27,9 @@ void* handleSession(void* arg)
 
         if (Packet->PacketType == DISCONNECT)
             break;
-    }
 
+        log_hex(Packet->FixedHeader->addr, Packet->FixedHeader->size);
+    }
 }
 
 void main(int argc, char** argv)
