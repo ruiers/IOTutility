@@ -301,7 +301,7 @@ int MQTT_SessionFetch(MQTT_Session* this, MemoryStream topMsg)
         break;
     case PUBLISH:
         remain_len_bytes = decode_length_to_interger(tcp_data + 1, &remain_len);
-        topic_len = tcp_data[1+remain_len_bytes + 1];
+        topic_len = htons(*((unsigned short *) (tcp_data + 1 + remain_len_bytes)));
         message_len = total_len - (1 + remain_len_bytes + 2 + topic_len);
 
         topic = topMsg->AddByteArray(topMsg, tcp_data + 1 + remain_len_bytes + 2, topic_len);
