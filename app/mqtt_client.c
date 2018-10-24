@@ -32,8 +32,8 @@ void main(int argc, char** argv)
 {
     char hostIPaddr[16] = "198.41.30.241";
     int  hostPortNumber = 1883;
-    char topic_string[256] = "wuhan/test";
-    char message_string[256] = "hello";
+    char *topic_string = "wuhan/test";
+    char *message_string = "hello";
     MQTT_Session* Session = NULL;
     char keep_going = 'c';
     int  i = 1;
@@ -52,12 +52,12 @@ void main(int argc, char** argv)
 
         if(!strcmp(argv[i], "-t") || !strcmp(argv[i], "--topic"))
         {
-            strcpy(topic_string, argv[++i]);
+            topic_string = argv[++i];
         }
 
         if(!strcmp(argv[i], "-m") || !strcmp(argv[i], "--message"))
         {
-            strcpy(message_string, argv[++i]);
+            message_string = argv[++i];
         }
     }
 
