@@ -191,16 +191,18 @@ int MQTT_SessionConnect(MQTT_Session* this)
     MQTT_ControlPacket*  mqttConnect = MQTT_ControlPacketCreate(CONNECT);
     MQTT_ACKPacket       mqttACK;
 
-    this->Status = STA_WAITING_ACK;
+    this->Status = STA_CONNECTING;
     MQTT_ControlPacketGetPacketData(mqttConnect);
     setTcpClientTimeout(this->Session->Client, 60);
     this->Session->Send(this->Session, mqttConnect->PacketData, mqttConnect->PacketLength);
+    /*
     this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
 
     if ((mqttACK.type_and_flag == CONNACK) && (mqttACK.ack_code[1] == CONNACK_ACCEPTED))
         this->Status = STA_CONNECTED;
     else
         this->Status = STA_CONNECT_NO_ACK;
+    */
 }
 
 int MQTT_SessionDisonnect(MQTT_Session* this)
@@ -221,21 +223,16 @@ int MQTT_SessionPublish(MQTT_Session* this, char* topic, char* message, int leng
     if (this->Status != STA_CONNECTED)
         return -1;
 
-    this->Status = STA_WAITING_ACK;
+    this->Status = STA_PUBLISHING;
     MQTT_ControlPacketSetTopic(mqttPublish, topic, strlen(topic));
     MQTT_ControlPacketSetMessage(mqttPublish, message, length);
     MQTT_ControlPacketGetPacketData(mqttPublish);
     mqttStatus = this->Session->Send(this->Session, mqttPublish->PacketData, mqttPublish->PacketLength);
 
-    if (mqttStatus == -1)
+    if (mqttStatus == mqttPublish->PacketLength)
     {
-        this->Disconnect(this);
-        this->Connect(this);
-        this->Session->Send(this->Session, mqttPublish->PacketData, mqttPublish->PacketLength);
+        this->Status = STA_CONNECTED;
     }
-    // this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
-    // FixMe I do not know why it is blocked here.
-    this->Status = STA_CONNECTED;
 }
 
 int MQTT_SessionSubscribe(MQTT_Session* this, char* topic)
@@ -249,7 +246,7 @@ int MQTT_SessionSubscribe(MQTT_Session* this, char* topic)
     if (this->Status != STA_CONNECTED)
         return -1;
 
-    this->Status = STA_WAITING_ACK;
+    this->Status = STA_SUBSCRIBING;
     *(mqttSubscribe->FixedHeader->addr) |= 0x02;
     MQTT_ControlPacketSetMessage(mqttSubscribe, (char *) &message_identifier, sizeof(short));
     MQTT_ControlPacketSetMessage(mqttSubscribe, (char *) &topic_len, sizeof(short));
@@ -270,62 +267,49 @@ int MQTT_SessionPingReq(MQTT_Session* this)
     if (this->Status != STA_CONNECTED)
         return -1;
 
-    this->Status = STA_WAITING_ACK;
+    this->Status = STA_PINGREQING;
 
     MQTT_ControlPacketGetPacketData(mqttPingReq);
     this->Session->Send(this->Session, mqttPingReq->PacketData, mqttPingReq->PacketLength);
+    /*
     this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
 
     if (mqttACK.type_and_flag == PINGRESP)
         this->Status = STA_CONNECTED;
     else
         this->Status = STA_WAITING_ACK;
+    */
 }
 
 int MQTT_SessionFetch(MQTT_Session* this, MemoryStream topMsg)
 {
-    char *tcp_data;
+    unsigned char tcp_data[1024];
+    MQTT_ACKPacket *ackPacket = NULL;
     int total_len = 0, remain_len = 0, remain_len_bytes = 0, i = 0;
     int topic_len = 0, message_len = 0;
     int tcp_status = 0;
     MemoryByteArray* topic = NULL, *message = NULL;
 
-    tcp_data = calloc(1, 5);
-    this->Session->Receive(this->Session, tcp_data, 5);
-    remain_len_bytes = decode_length_to_interger(tcp_data + 1, &remain_len);
+    total_len = this->Session->Receive(this->Session, tcp_data, sizeof(tcp_data));
+    ackPacket = (MQTT_ACKPacket *) tcp_data;
 
-    total_len = remain_len + remain_len_bytes + 1;
-    tcp_data = realloc(tcp_data, total_len);
-    tcp_status = this->Session->Receive(this->Session, tcp_data + 5, total_len - 5);
-    /*
-    if (tcp_status == -1)
+    switch ( ackPacket->type_and_flag & 0xF0)
     {
-        MQTT_SessionPingReq(this);
-    }
-    */
-    topic_len = tcp_data[1+remain_len_bytes + 1];
-    message_len = total_len - (1 + remain_len_bytes + 2 + topic_len);
+    case CONNACK:
+        if (ackPacket->ack_code[1] == CONNACK_ACCEPTED)
+            this->Status = STA_CONNECTED;
+        break;
+    case PUBLISH:
+        remain_len_bytes = decode_length_to_interger(tcp_data + 1, &remain_len);
+        topic_len = tcp_data[1+remain_len_bytes + 1];
+        message_len = total_len - (1 + remain_len_bytes + 2 + topic_len);
 
-    if ( (total_len < 0) || (topic_len < 0) || (message_len < 0) )
-    {
-        //printf("total len:%d topic len:%d message len:%d\n", total_len, topic_len, message_len);
-        free(tcp_data);
-        return -1;
-    }
-
-    if (tcp_data[0] == 0x30)
-    {
-        if ( (topic_len + message_len + 1 + 2 + remain_len_bytes) > total_len )
-        {
-            printf("length error\n");
-            free(tcp_data);
-            return -1;
-        }
         topic = topMsg->AddByteArray(topMsg, tcp_data + 1 + remain_len_bytes + 2, topic_len);
         message = topMsg->AddByteArray(topMsg, tcp_data + total_len - message_len, message_len);
+        break;
+    default:
+        break;
     }
-
-    free(tcp_data);
 }
 
 MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum)
@@ -389,6 +373,7 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
         Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->PacketLength - Packet->RemainLength,
                                  data[Packet->PacketLength - Packet->RemainLength + 1] + sizeof(short));
         Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size + Packet->VariableHeader->size, Packet->RemainLength - Packet->VariableHeader->size);
+        ack.type_and_flag = PUBACK;
         break;
     }
 

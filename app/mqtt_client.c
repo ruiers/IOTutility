@@ -5,7 +5,7 @@
 #include <string.h>
 #include "thread.h"
 #include "mqttClass.h"
-
+#include "debug.h"
 void* fetchingWork(void* arg)
 {
     MQTT_Session* Session = (MQTT_Session*) arg;
@@ -26,7 +26,6 @@ void* fetchingWork(void* arg)
             topic_and_message->EmptyByteArray(topic_and_message);
         }
     }
-
 }
 
 void main(int argc, char** argv)
@@ -75,8 +74,15 @@ void main(int argc, char** argv)
         if (keep_going == 'z')
             break;
 
+        if (keep_going == 's')
+        {
+            Session->Subscribe(Session, "wuhan/#");
+        }
+
         if (keep_going == 'a')
+        {
             Session->Publish(Session, topic_string, message_string, strlen(message_string));
+        }
 
     }
 

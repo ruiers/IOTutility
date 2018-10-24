@@ -26,6 +26,7 @@ void* handleSession(void* arg)
         {
             printf("topic:%s\nmessage:%s\n", Packet->VariableHeader->addr + 2, Packet->PayloadStart->addr);
             log_hex(Packet->ControlPacket->Memory, Packet->ControlPacket->Length);
+            usleep(100);
             session->Session->Send(session->Session, Packet->ControlPacket->Memory, Packet->ControlPacket->Length);
         }
 
