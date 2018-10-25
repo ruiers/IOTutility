@@ -63,8 +63,6 @@ void main(int argc, char** argv)
 
     Session = MQTT_SessionCreate(hostIPaddr, hostPortNumber);
     Session->Connect(Session);
-    Session->Subscribe(Session, "wuhan/#");
-
     taskCreate(fetchingWork, Session);
 
     while (keep_going)
