@@ -296,6 +296,8 @@ int MQTT_SessionHandleCommand(unsigned char *cmd_data, int cmd_data_len, MemoryS
         if (ackPacket->ack_code[1] == CONNACK_ACCEPTED)
             return STA_CONNECTED;
         break;
+    case PINGRESP:
+        break;
     case PUBLISH:
         remain_len_bytes = decode_length_to_interger(cmd_data + 1, &remain_len);
         topic_len = htons(*((unsigned short *) (cmd_data + 1 + remain_len_bytes)));
@@ -323,12 +325,18 @@ int MQTT_SessionFetch(MQTT_Session* this, MemoryStream topMsg)
 
     tcp_data_len = this->Session->Receive(this->Session, tcp_data, sizeof(tcp_data));
 
+    if (tcp_data_len < 0)
+    {
+        MQTT_SessionPingReq(this);
+    }
+
     while(tcp_data_len > 0)
     {
         switch(tcp_data[cmd_data_offset] & 0xF0)
         {
         case CONNACK:
         case PUBACK:
+        case PINGRESP:
             cmd_data_len = 4;
             break;
         case PUBLISH:
