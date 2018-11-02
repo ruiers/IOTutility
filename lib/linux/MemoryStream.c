@@ -4,6 +4,7 @@
 #include "MemoryStream.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define is_power_of_2(x)	((x) != 0 && (((x) & ((x) - 1)) == 0))
 
 int MemoryStreamWrite(MemoryStream this, char* data_addr, int data_len)
 {
@@ -34,11 +35,18 @@ MemoryStream MemoryStreamAlloc(int size)
 {
     MemoryStream ms = calloc(1, sizeof(MemoryStream_T));
 
-    ms->Memory = malloc(size);
-    memset(ms->Memory, 0x0, size);
+    ms->Length = size;
+
+    if (!is_power_of_2(size))
+    {
+        while(!is_power_of_2(ms->Length))
+            ms->Length++;
+    }
+
+    ms->Memory = malloc(ms->Length);
+    memset(ms->Memory, 0x0, ms->Length);
 
     ms->this   = ms;
-    ms->Length = size;
     ms->InPos  = 0;
     ms->OutPos = 0;
 
