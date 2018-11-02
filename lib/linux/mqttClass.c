@@ -327,7 +327,11 @@ int MQTT_SessionFetch(MQTT_Session* this, MemoryStream topMsg)
 
     if (tcp_data_len < 0)
     {
+        // Force reconnect
+        this->Session->Connected = 1;
         MQTT_SessionPingReq(this);
+
+        return 0;
     }
 
     while(tcp_data_len > 0)
