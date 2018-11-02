@@ -45,9 +45,25 @@ void tcpClientDisconnect(TcpClient* this)
     }
 }
 
+int tcpClientGetError(TcpClient* this)
+{
+    int optval;
+    int optlen = sizeof(int);
+
+    getsockopt(this->Client, SOL_SOCKET, SO_ERROR, &optval, &optlen);
+
+    return optval;
+}
+
 int tcpClientSend(TcpClient* this, char* data_addr, int data_len)
 {
     int length = 0;
+
+    if (tcpClientGetError(this))
+    {
+        this->Connected = 0;
+        return -1;
+    }
 
     if (this->Connected)
     {
@@ -64,9 +80,21 @@ int tcpClientReceive(TcpClient* this, char* data_addr, int data_len)
 {
     int length = 0;
 
+    if (tcpClientGetError(this))
+    {
+        this->Connected = 0;
+        return -1;
+    }
+
     if (this->Connected)
     {
         length = read(this->Client, data_addr, data_len);
+
+        if (length < 0)
+        {
+            this->Connected = 0;
+            return -1;
+        }
 
         if (length <= data_len)
             return length;
