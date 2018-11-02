@@ -393,6 +393,10 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
     MQTT_ACKPacket ack;
 
     Packet->PacketLength = session->Session->Receive(session->Session, data, sizeof(data));
+
+    if (Packet->PacketLength < 0)
+        return NULL;
+
     Packet->ControlPacket = MemoryStreamCreate();
     Packet->PacketType = *(data) & 0xF0;
     Packet->FixedHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data, 1 + decode_length_to_interger(data + 1, &Packet->RemainLength));
@@ -416,14 +420,15 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
         this->numSession--;
         break;
     case PUBLISH:
-        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->PacketLength - Packet->RemainLength,
-                                 data[Packet->PacketLength - Packet->RemainLength + 1] + sizeof(short));
-        Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size + Packet->VariableHeader->size, Packet->RemainLength - Packet->VariableHeader->size);
+        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size,
+                                 sizeof(short) + htons(*((short *)(data + Packet->FixedHeader->size))));
+        Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket,
+                               data + Packet->FixedHeader->size + Packet->VariableHeader->size, Packet->RemainLength - Packet->VariableHeader->size);
         ack.type_and_flag = PUBACK;
         break;
     case SUBSCRIBE:
-        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->PacketLength - Packet->RemainLength,
-                                 data[Packet->PacketLength - Packet->RemainLength + 1] + sizeof(short));
+        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data +Packet->FixedHeader->size,
+                                 htons(*((short *)(data + Packet->FixedHeader->size))));
         Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size + Packet->VariableHeader->size, Packet->RemainLength - Packet->VariableHeader->size);
         ack.type_and_flag = SUBACK;
         break;
