@@ -60,10 +60,10 @@ void* handleSession(void* arg)
     {
         Packet = mqttSrv->ACKForSession(mqttSrv, session);
 
-        if (Packet->PacketType == PUBLISH)
+        if ((Packet != NULL) && (Packet->PacketType == PUBLISH))
         {
-            printf("topic:%s\nmessage:%s\n", Packet->VariableHeader->addr + 2, Packet->PayloadStart->addr);
-            log_hex(Packet->ControlPacket->Memory, Packet->ControlPacket->Length);
+            log_dbg("topic:%s\nmessage:%s\n", Packet->VariableHeader->addr + 2, Packet->PayloadStart->addr);
+
             int index = 0;
             MemoryByteArray* array;
             for (array = mqttSub->topics->GetByteArray(mqttSub->topics); array != NULL; array = mqttSub->topics->NextByteArray(array))
@@ -71,18 +71,15 @@ void* handleSession(void* arg)
                 if (IsTopicMatch(array->addr, Packet->VariableHeader->addr + 2))
                 {
                     session->Session->Send(mqttSub->sessions[index]->Session, Packet->ControlPacket->Memory, Packet->ControlPacket->Length);
-                    log_dbg("match and sendding from %p client %d", mqttSub->sessions[index], mqttSub->sessions[index]->Session->Client)
                 }
-                log_dbg("list session %d %p", index, mqttSub->sessions[index])
+
                 index++;
 
             }
         }
 
-        if (Packet->PacketType == SUBSCRIBE)
+        if ((Packet != NULL) && (Packet->PacketType == SUBSCRIBE))
         {
-            log_hex(Packet->PayloadStart->addr + 1, Packet->PayloadStart->size -1);
-            log_dbg("%s", Packet->PayloadStart->addr + 1);
             int index = 0;
             MemoryByteArray* array;
             for (array = mqttSub->topics->GetByteArray(mqttSub->topics); array != NULL; array = mqttSub->topics->NextByteArray(array))
@@ -91,7 +88,7 @@ void* handleSession(void* arg)
                 {
                     if (mqttSub->sessions[index] == session)
                     {
-                        break;
+                        continue;
                     }
                 }
 
@@ -107,10 +104,18 @@ void* handleSession(void* arg)
             }
         }
 
-        if (Packet->PacketType == DISCONNECT)
+        if ((Packet != NULL) && (Packet->PacketType == DISCONNECT))
+        {
+            continue;
+        }
+
+        if (Packet == NULL)
+        {
             break;
+        }
 
-
+        Packet->ControlPacket->EmptyByteArray(Packet->ControlPacket);
+        MemoryStreamDelete(Packet->ControlPacket);
     }
 }
 
