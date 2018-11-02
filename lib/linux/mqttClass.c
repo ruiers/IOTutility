@@ -394,7 +394,7 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
 
     Packet->PacketLength = session->Session->Receive(session->Session, data, sizeof(data));
     Packet->ControlPacket = MemoryStreamCreate();
-    Packet->PacketType = *(data);
+    Packet->PacketType = *(data) & 0xF0;
     Packet->FixedHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data, 1 + decode_length_to_interger(data + 1, &Packet->RemainLength));
     Packet->ControlPacket->Memory = malloc(Packet->PacketLength);
     memcpy(Packet->ControlPacket->Memory, data, Packet->PacketLength);
@@ -420,6 +420,12 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
                                  data[Packet->PacketLength - Packet->RemainLength + 1] + sizeof(short));
         Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size + Packet->VariableHeader->size, Packet->RemainLength - Packet->VariableHeader->size);
         ack.type_and_flag = PUBACK;
+        break;
+    case SUBSCRIBE:
+        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->PacketLength - Packet->RemainLength,
+                                 data[Packet->PacketLength - Packet->RemainLength + 1] + sizeof(short));
+        Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size + Packet->VariableHeader->size, Packet->RemainLength - Packet->VariableHeader->size);
+        ack.type_and_flag = SUBACK;
         break;
     }
 

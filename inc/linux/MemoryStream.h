@@ -19,12 +19,13 @@ typedef struct MemoryStream_Head
     struct memory_list_head head;
 
     char*  Memory;
-    int    Capacity;
+    int    Count;
     int    Length;
-    int    Position;
+    int    InPos;
+    int    OutPos;
 
-    void* (*Write) (struct MemoryStream_Head* this, char* data_addr, int data_len);
-    void* (*Read)  (struct MemoryStream_Head* this, char* data_addr, int data_len);
+    int (*Write) (struct MemoryStream_Head* this, char* data_addr, int data_len);
+    int (*Read)  (struct MemoryStream_Head* this, char* data_addr, int data_len);
 
     MemoryByteArray* (*AddByteArray)  (struct MemoryStream_Head* this, char* data_addr, int data_len);
     void (*DeleteByteArray) (struct MemoryStream_Head* this, MemoryByteArray* array);
