@@ -111,6 +111,17 @@ void* handleSession(void* arg)
 
         if (Packet == NULL)
         {
+            int index = 0;
+            MemoryByteArray* array;
+            for (index = mqttSub->count; index > -1; index--)
+            {
+                if (mqttSub->sessions[index] == session)
+                {
+                    mqttSub->sessions[index] = NULL;
+                    mqttSub->count--;
+                }
+            }
+
             break;
         }
 
