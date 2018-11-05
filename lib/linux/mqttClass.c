@@ -395,7 +395,7 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
     char data[1500];
     MQTT_ControlPacket* Packet = calloc(1, sizeof(MQTT_ControlPacket));
     MQTT_ACKPacket ack;
-    int size_of_ack, size_of_fixheader, size_of_x;
+    int size_of_ack, size_of_fixheader, size_of_x, offset;
 
     Packet->PacketLength = session->Session->Receive(session->Session, data, sizeof(data));
 
@@ -410,6 +410,7 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
         return NULL;
 
     Packet->FixedHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data, size_of_fixheader);
+    offset = size_of_fixheader;
     Packet->ControlPacket->Memory = malloc(Packet->PacketLength);
     memcpy(Packet->ControlPacket->Memory, data, Packet->PacketLength);
 
@@ -436,33 +437,36 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
     case PUBLISH:
         size_of_x = sizeof(short) + htons(*((short *)(data + Packet->FixedHeader->size)));
 
-        if ((size_of_x + Packet->FixedHeader->size) > Packet->PacketLength)
+        if ((size_of_x + offset) > Packet->PacketLength)
             return NULL;
-        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size, size_of_x);
+
+        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + offset, size_of_x);
+        offset += size_of_x;
+
         size_of_x = Packet->RemainLength - Packet->VariableHeader->size;
 
-        if ((size_of_x + Packet->FixedHeader->size + Packet->VariableHeader->size) > Packet->PacketLength)
+        if ((size_of_x + offset) > Packet->PacketLength)
             return  NULL;
 
-        Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket,
-                               data + Packet->FixedHeader->size + Packet->VariableHeader->size, size_of_x);
+        Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + offset, size_of_x);
         ack.type_and_flag = PUBACK;
         size_of_ack = sizeof(ack);
         break;
     case SUBSCRIBE:
         size_of_x = sizeof(short) + htons(*((short *)(data + Packet->FixedHeader->size)));
 
-        if ((size_of_x + Packet->FixedHeader->size) > Packet->PacketLength)
+        if ((size_of_x + offset) > Packet->PacketLength)
             return NULL;
 
-        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size, size_of_x);
+        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + offset, size_of_x);
+        offset += size_of_x;
 
-        if ((size_of_x + Packet->FixedHeader->size + Packet->VariableHeader->size) > Packet->PacketLength)
+        if ((size_of_x + offset) > Packet->PacketLength)
             return  NULL;
 
         size_of_x = Packet->RemainLength - Packet->VariableHeader->size;
 
-        Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size + Packet->VariableHeader->size, size_of_x);
+        Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + offset, size_of_x);
         ack.type_and_flag = SUBACK;
         size_of_ack = sizeof(ack);
         break;

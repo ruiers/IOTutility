@@ -3,9 +3,6 @@
 #include <string.h>
 #include "MemoryStream.h"
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define is_power_of_2(x)	((x) != 0 && (((x) & ((x) - 1)) == 0))
-
 int MemoryStreamWrite(MemoryStream this, char* data_addr, int data_len)
 {
     int i = 0;
