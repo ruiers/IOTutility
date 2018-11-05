@@ -2,6 +2,9 @@
 #define __INC_LINUX_MEMORYSTREAM__
 #include <sys/queue.h>
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define is_power_of_2(x)	((x) != 0 && (((x) & ((x) - 1)) == 0))
+
 STAILQ_HEAD(memory_list_head, MemoryBytes);
 
 struct MemoryBytes
