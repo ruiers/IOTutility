@@ -395,6 +395,7 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
     char data[1500];
     MQTT_ControlPacket* Packet = calloc(1, sizeof(MQTT_ControlPacket));
     MQTT_ACKPacket ack;
+    int size_of_ack;
 
     Packet->PacketLength = session->Session->Receive(session->Session, data, sizeof(data));
 
@@ -411,17 +412,21 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
     {
     case PINGREQ:
         ack.type_and_flag = PINGRESP;
+        ack.remaining_length = 0;
+        size_of_ack = 2;
         break;
     case CONNECT:
         ack.type_and_flag = CONNACK;
         ack.remaining_length = 2;
         ack.ack_code[1] = CONNACK_ACCEPTED;
         this->numSession++;
+        size_of_ack = sizeof(ack);
         break;
     case DISCONNECT:
         ack.type_and_flag = DISCONNECT;
         ack.remaining_length = 2;
         this->numSession--;
+        size_of_ack = sizeof(ack);
         break;
     case PUBLISH:
         Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size,
@@ -429,16 +434,18 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
         Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket,
                                data + Packet->FixedHeader->size + Packet->VariableHeader->size, Packet->RemainLength - Packet->VariableHeader->size);
         ack.type_and_flag = PUBACK;
+        size_of_ack = sizeof(ack);
         break;
     case SUBSCRIBE:
         Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data +Packet->FixedHeader->size,
                                  htons(*((short *)(data + Packet->FixedHeader->size))));
         Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + Packet->FixedHeader->size + Packet->VariableHeader->size, Packet->RemainLength - Packet->VariableHeader->size);
         ack.type_and_flag = SUBACK;
+        size_of_ack = sizeof(ack);
         break;
     }
 
-    if( sizeof(ack) == session->Session->Send(session->Session, (char *) &ack, sizeof(ack)))
+    if( sizeof(ack) == session->Session->Send(session->Session, (char *) &ack, size_of_ack))
         return Packet;
     else
         return NULL;
