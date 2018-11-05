@@ -10,21 +10,29 @@
 #include <arpa/inet.h>
 #include "debug.h"
 
-typedef struct _MQTT_Subed_
+typedef struct _MQTT_Subed_Record_
 {
-    MemoryStream topics;
-    MQTT_Session* sessions[100];
-    int          count;
-} MQTT_Subed;
+    MemoryByteArray* topic;
+    MQTT_Session*    session;
+} MQTT_SubedRecord;
+
+typedef struct node_rec
+{
+    MQTT_SubedRecord data;
+    struct node_rec* next;
+} MQTT_Sub;
 
 char IsTopicMatch(char* src, char* dst)
 {
     int index, src_len, dst_len;
 
+    if ((src == NULL) || (dst == NULL))
+        return 0;
+
     src_len = strlen(src);
     dst_len = strlen(dst);
 
-    if (dst_len < src_len)
+    if (src_len > dst_len)
         return 0;
 
     if ( src[0] != '#' )
@@ -47,7 +55,85 @@ char IsTopicMatch(char* src, char* dst)
     return 1;
 }
 
-MQTT_Subed  *mqttSub = NULL;
+MQTT_Sub* MQTT_SubNew(char* in_topic, MQTT_Session* in_session)
+{
+    MQTT_Sub* sub = (MQTT_Sub *) malloc(sizeof(MQTT_Sub));
+
+    (sub->data).session = in_session;
+    (sub->data).topic   = (MemoryByteArray *) malloc(sizeof(MemoryByteArray));
+    (sub->data).topic->size = strlen(in_topic);
+    (sub->data).topic->addr = malloc((sub->data).topic->size);
+    memcpy((sub->data).topic->addr, in_topic, (sub->data).topic->size);
+
+    return sub;
+}
+
+MQTT_Sub *MQTT_SubIsRecorded(MQTT_Sub *list, char* in_topic, MQTT_Session* in_session)
+{
+    MQTT_Sub* sub = NULL;
+
+    for (sub = list->next; sub != NULL; sub = sub->next)
+    {
+        if ((sub->data.session == in_session) && (IsTopicMatch(sub->data.topic->addr, in_topic)))
+            break;
+    }
+
+    return sub;
+}
+
+MQTT_Sub *MQTT_SubHaveTopic(MQTT_Sub *list, char* in_topic)
+{
+    MQTT_Sub* sub = NULL;
+
+    for (sub = list->next; sub != NULL; sub = sub->next)
+    {
+        if (IsTopicMatch(sub->data.topic->addr, in_topic))
+            break;
+    }
+
+    return sub;
+}
+
+int MQTT_SubAdd(MQTT_Sub *list, char* in_topic, MQTT_Session* in_session)
+{
+    MQTT_Sub* sub = NULL;
+    MQTT_Sub* record = NULL;
+
+    sub = MQTT_SubIsRecorded(list, in_topic, in_session);
+
+    if (sub)
+    {
+        return 0;
+    }
+    else
+    {
+        record = MQTT_SubNew(in_topic, in_session);
+        record->next = list->next;
+        list->next  = record;
+    }
+
+    return 1;
+}
+
+int MQTT_SubRecordDel(MQTT_Sub *list, char* in_topic)
+{
+    MQTT_Sub* sub = NULL;
+    MQTT_Sub* old_sub = list;
+
+    for(sub = list; sub != NULL; sub = sub->next)
+    {
+        if ((memcmp(sub->data.topic->addr, in_topic, MIN(strlen(in_topic), sub->data.topic->size)) == 0))
+        {
+            old_sub->next = sub->next;
+            free(sub->data.topic->addr);
+            free(sub);
+        }
+
+        old_sub = sub;
+    }
+}
+
+MQTT_Sub    *mqttSub = NULL;
 MQTT_Server *mqttSrv = NULL;
 char buf[512] = { 0 };
 
@@ -55,6 +141,7 @@ void* handleSession(void* arg)
 {
     MQTT_Session *session = (MQTT_Session *) arg;
     MQTT_ControlPacket *Packet = NULL;
+    MQTT_Sub* sub = NULL;
 
     while (1)
     {
@@ -62,46 +149,23 @@ void* handleSession(void* arg)
 
         if ((Packet != NULL) && (Packet->PacketType == PUBLISH))
         {
-            log_dbg("topic:%s\nmessage:%s\n", Packet->VariableHeader->addr + 2, Packet->PayloadStart->addr);
-
-            int index = 0;
-            MemoryByteArray* array;
-            for (array = mqttSub->topics->GetByteArray(mqttSub->topics); array != NULL; array = mqttSub->topics->NextByteArray(array))
+            for (sub = mqttSub->next; sub != NULL; sub = sub->next)
             {
-                if (IsTopicMatch(array->addr, Packet->VariableHeader->addr + 2))
-                {
-                    session->Session->Send(mqttSub->sessions[index]->Session, Packet->ControlPacket->Memory, Packet->ControlPacket->Length);
-                }
-
-                index++;
-
+                if (IsTopicMatch(sub->data.topic->addr, Packet->VariableHeader->addr + 2))
+                    session->Session->Send((sub->data).session->Session, Packet->ControlPacket->Memory, Packet->ControlPacket->Length);
             }
         }
 
         if ((Packet != NULL) && (Packet->PacketType == SUBSCRIBE))
         {
-            int index = 0;
-            MemoryByteArray* array;
-            for (array = mqttSub->topics->GetByteArray(mqttSub->topics); array != NULL; array = mqttSub->topics->NextByteArray(array))
-            {
-                if (IsTopicMatch(array->addr, Packet->PayloadStart->addr + 1))
-                {
-                    if (mqttSub->sessions[index] == session)
-                    {
-                        continue;
-                    }
-                }
+            sub = MQTT_SubIsRecorded(mqttSub, Packet->VariableHeader->addr + 2, session);
 
-                index++;
-            }
-
-            if ((mqttSub->count == 0) || (mqttSub->count == index))
+            if(sub)
             {
-                mqttSub->topics->AddByteArray(mqttSub->topics, Packet->PayloadStart->addr + 1, Packet->PayloadStart->size - 1);
-                mqttSub->sessions[mqttSub->count] = session;
-                mqttSub->count++;
-                log_dbg("add %p", session)
+
             }
+            else
+                MQTT_SubAdd(mqttSub, Packet->PayloadStart->addr + 1, session);
         }
 
         if ((Packet != NULL) && (Packet->PacketType == DISCONNECT))
@@ -111,17 +175,19 @@ void* handleSession(void* arg)
 
         if (Packet == NULL)
         {
-            int index = 0;
-            MemoryByteArray* array;
-            for (index = mqttSub->count; index > -1; index--)
-            {
-                if (mqttSub->sessions[index] == session)
-                {
-                    mqttSub->sessions[index] = NULL;
-                    mqttSub->count--;
-                }
-            }
+            MQTT_Sub* old_sub = mqttSub;
 
+            for(sub = mqttSub; sub != NULL; sub = sub->next)
+            {
+                if (sub->data.session == session)
+                {
+                    old_sub->next = sub->next;
+                    free(sub->data.topic->addr);
+                    free(sub);
+                }
+
+                old_sub = sub;
+            }
             break;
         }
 
@@ -135,16 +201,19 @@ void main(int argc, char** argv)
     MQTT_Session *session = NULL;
 
     mqttSrv = MQTT_ServerCreate("127.0.0.1", 1888);
-    mqttSub = (MQTT_Subed *) malloc(sizeof(MQTT_Subed));
+    mqttSub = (MQTT_Sub *) malloc(sizeof(MQTT_Sub));
 
-    mqttSub->topics = MemoryStreamCreate();
-    mqttSub->count  = 0;
+    mqttSub->next = NULL;
 
     while (1)
     {
         session = mqttSrv->WaitForSession(mqttSrv);
-        printf("%s: connect to %s at %d \n", __func__, inet_ntoa(session->Session->localAddr.sin_addr), ntohs(session->Session->localAddr.sin_port));
-        taskCreate(handleSession, session);
+
+        if (session)
+        {
+            printf("%s: connect to %s at %d \n", __func__, inet_ntoa(session->Session->localAddr.sin_addr), ntohs(session->Session->localAddr.sin_port));
+            taskCreate(handleSession, session);
+        }
     }
 
     pause();
