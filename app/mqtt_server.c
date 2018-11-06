@@ -3,12 +3,41 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 #include "thread.h"
 #include "mqttClass.h"
 #include "TcpClass.h"
 #include "UdpClient.h"
 #include <arpa/inet.h>
+#include "common.h"
 #include "debug.h"
+
+/* Error values */
+enum mosq_err_t
+{
+    MOSQ_ERR_CONN_PENDING = -1,
+    MOSQ_ERR_SUCCESS = 0,
+    MOSQ_ERR_NOMEM = 1,
+    MOSQ_ERR_PROTOCOL = 2,
+    MOSQ_ERR_INVAL = 3,
+    MOSQ_ERR_NO_CONN = 4,
+    MOSQ_ERR_CONN_REFUSED = 5,
+    MOSQ_ERR_NOT_FOUND = 6,
+    MOSQ_ERR_CONN_LOST = 7,
+    MOSQ_ERR_TLS = 8,
+    MOSQ_ERR_PAYLOAD_SIZE = 9,
+    MOSQ_ERR_NOT_SUPPORTED = 10,
+    MOSQ_ERR_AUTH = 11,
+    MOSQ_ERR_ACL_DENIED = 12,
+    MOSQ_ERR_UNKNOWN = 13,
+    MOSQ_ERR_ERRNO = 14,
+    MOSQ_ERR_EAI = 15,
+    MOSQ_ERR_PROXY = 16,
+    MOSQ_ERR_PLUGIN_DEFER = 17,
+    MOSQ_ERR_MALFORMED_UTF8 = 18,
+    MOSQ_ERR_KEEPALIVE = 19,
+    MOSQ_ERR_LOOKUP = 20,
+};
 
 typedef struct _MQTT_Subed_Record_
 {
@@ -22,37 +51,164 @@ typedef struct node_rec
     struct node_rec* next;
 } MQTT_Sub;
 
-char IsTopicMatch(char* src, char* dst)
+/* Does a topic match a subscription? */
+int mosquitto_topic_matches_sub2(const char *sub, size_t sublen, const char *topic, size_t topiclen, bool *result)
 {
-    int index, src_len, dst_len;
+    int spos, tpos;
+    bool multilevel_wildcard = false;
 
-    if ((src == NULL) || (dst == NULL))
-        return 0;
+    if(!result) return MOSQ_ERR_INVAL;
+    *result = false;
 
-    src_len = strlen(src);
-    dst_len = strlen(dst);
-
-    if (src_len > dst_len)
-        return 0;
-
-    if ( src[0] != '#' )
+    if(!sub || !topic)
     {
-        for (index = 0; index < src_len - 1; index++)
+        return MOSQ_ERR_INVAL;
+    }
+
+    if(!sublen || !topiclen)
+    {
+        *result = false;
+        return MOSQ_ERR_INVAL;
+    }
+
+    if(sublen && topiclen)
+    {
+        if((sub[0] == '$' && topic[0] != '$')
+                || (topic[0] == '$' && sub[0] != '$'))
         {
-            if (src[index] != dst[index])
-                return 0;
+
+            return MOSQ_ERR_SUCCESS;
         }
     }
+
+    spos = 0;
+    tpos = 0;
+
+    while(spos < sublen && tpos <= topiclen)
+    {
+        if(sub[spos] == topic[tpos])
+        {
+            if(tpos == topiclen-1)
+            {
+                /* Check for e.g. foo matching foo/# */
+                if(spos == sublen-3
+                        && sub[spos+1] == '/'
+                        && sub[spos+2] == '#')
+                {
+                    *result = true;
+                    multilevel_wildcard = true;
+                    return MOSQ_ERR_SUCCESS;
+                }
+            }
+            spos++;
+            tpos++;
+            if(spos == sublen && tpos == topiclen)
+            {
+                *result = true;
+                return MOSQ_ERR_SUCCESS;
+            }
+            else if(tpos == topiclen && spos == sublen-1 && sub[spos] == '+')
+            {
+                if(spos > 0 && sub[spos-1] != '/')
+                {
+                    return MOSQ_ERR_INVAL;
+                }
+                spos++;
+                *result = true;
+                return MOSQ_ERR_SUCCESS;
+            }
+        }
+        else
+        {
+            if(sub[spos] == '+')
+            {
+                /* Check for bad "+foo" or "a/+foo" subscription */
+                if(spos > 0 && sub[spos-1] != '/')
+                {
+                    return MOSQ_ERR_INVAL;
+                }
+                /* Check for bad "foo+" or "foo+/a" subscription */
+                if(spos < sublen-1 && sub[spos+1] != '/')
+                {
+                    return MOSQ_ERR_INVAL;
+                }
+                spos++;
+                while(tpos < topiclen && topic[tpos] != '/')
+                {
+                    tpos++;
+                }
+                if(tpos == topiclen && spos == sublen)
+                {
+                    *result = true;
+                    return MOSQ_ERR_SUCCESS;
+                }
+            }
+            else if(sub[spos] == '#')
+            {
+                if(spos > 0 && sub[spos-1] != '/')
+                {
+                    return MOSQ_ERR_INVAL;
+                }
+                multilevel_wildcard = true;
+                if(spos+1 != sublen)
+                {
+                    return MOSQ_ERR_INVAL;
+                }
+                else
+                {
+                    *result = true;
+                    return MOSQ_ERR_SUCCESS;
+                }
+            }
+            else
+            {
+                /* Check for e.g. foo/bar matching foo/+/# */
+                if(spos > 0
+                        && spos+2 == sublen
+                        && tpos == topiclen
+                        && sub[spos-1] == '+'
+                        && sub[spos] == '/'
+                        && sub[spos+1] == '#')
+                {
+                    *result = true;
+                    multilevel_wildcard = true;
+                    return MOSQ_ERR_SUCCESS;
+                }
+                return MOSQ_ERR_SUCCESS;
+            }
+        }
+    }
+    if(multilevel_wildcard == false && (tpos < topiclen || spos < sublen))
+    {
+        *result = false;
+    }
+
+    return MOSQ_ERR_SUCCESS;
+}
+
+bool IsTopicMatch(const char *sub, const char *topic)
+{
+    int slen, tlen, rerr;
+    bool result = false;
+
+    if(!sub || !topic)
+    {
+        return false;
+    }
+
+    slen = strlen(sub);
+    tlen = strlen(topic);
+
+    rerr =  mosquitto_topic_matches_sub2(sub, slen, topic, tlen, &result);
+
+    if ((rerr == 0) && (result == true))
+        return true;
+
     else
     {
-        for (index = src_len; index > 0; index--)
-        {
-            if (src[index] != dst[index])
-                return 0;
-        }
+        return false;
     }
 
-    return 1;
 }
 
 MQTT_Sub* MQTT_SubNew(char* in_topic, MQTT_Session* in_session)
@@ -84,11 +240,17 @@ MQTT_Sub *MQTT_SubIsRecorded(MQTT_Sub *list, char* in_topic, MQTT_Session* in_se
 MQTT_Sub *MQTT_SubHaveTopic(MQTT_Sub *list, char* in_topic)
 {
     MQTT_Sub* sub = NULL;
+    bool matched = false;
 
     for (sub = list->next; sub != NULL; sub = sub->next)
     {
         if (IsTopicMatch(sub->data.topic->addr, in_topic))
-            break;
+            return NULL;
+        else
+        {
+            if (matched == true)
+                break;
+        }
     }
 
     return sub;
