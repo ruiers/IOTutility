@@ -2,27 +2,24 @@
 #include <stdio.h>
 #include <fcntl.h>  // for open
 #include <unistd.h> // for close
+#include <string.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include "TcpClass.h"
 #include "debug.h"
 
 enum log_type
 {
-    LOCAL_CON,
-    LOCAL_FILE,
-    NET_UDP,
-    NET_TCP
+    LOCAL_CON  = 1 << 0,
+    LOCAL_FILE = 1 << 1,
+    NET_UDP    = 1 << 2,
+    NET_TCP    = 1 << 3
 };
 
-FILE *log_steam = NULL;
+FILE *log_steam_file = NULL;
+FILE *log_steam_ntcp = NULL;
 char log_type = LOCAL_CON;
 TcpClient* log_net = NULL;
-
-void log_out_to(int fd)
-{
-    log_steam = fdopen (dup(fd), "w");
-    setlinebuf(log_steam);
-}
 
 void init_log_to_file(char* name)
 {
@@ -32,8 +29,9 @@ void init_log_to_file(char* name)
 
     if (file_fd > 2)
     {
-        log_out_to(file_fd);
-        log_type = LOCAL_FILE;
+        log_steam_file = fdopen(dup(file_fd), "w");
+        setlinebuf(log_steam_file);
+        log_type |= LOCAL_FILE;
     }
     else
     {
@@ -45,33 +43,51 @@ void init_log_to_net(char* host, int port)
 {
     log_net = tcpClientCreate(host, port);
 
-    log_out_to(log_net->Client);
-    log_type = NET_TCP;
+    if (log_net == NULL)
+        return;
+
+    log_steam_ntcp = fdopen(dup(log_net->Client), "w");
+    setlinebuf(log_steam_ntcp);
+
+    log_type |= NET_TCP;
 }
 
 int log_buf(const char *format, ...)
 {
-    va_list arg;
+    va_list arg, *logarg;
     int done;
+
+    logarg = (va_list *) malloc(sizeof(va_list));
 
     va_start (arg, format);
 
-    if (log_type == LOCAL_CON)
-        done = vfprintf (stdout, format, arg);
-    else if (log_type == LOCAL_FILE)
+    if (log_type & LOCAL_CON)
     {
-        if (log_steam != NULL)
-            done = vfprintf (log_steam, format, arg);
+        memcpy(logarg, &arg, sizeof(arg));
+        done = vfprintf (stdout, format, *logarg);
     }
-    else if (log_type == NET_TCP)
+
+    if (log_type & LOCAL_FILE)
     {
-        if (log_net)
+        if (log_steam_file != NULL)
         {
-            done = vfprintf (log_steam, format, arg);
+            memcpy(logarg, &arg, sizeof(arg));
+            done = vfprintf (log_steam_file, format, *logarg);
+        }
+    }
+
+    if (log_type & NET_TCP)
+    {
+        if (log_net && log_steam_ntcp)
+        {
+            memcpy(logarg, &arg, sizeof(arg));
+            done = vfprintf (log_steam_ntcp, format, *logarg);
         }
     }
 
     va_end (arg);
+
+    free(logarg);
 
     return done;
 }
