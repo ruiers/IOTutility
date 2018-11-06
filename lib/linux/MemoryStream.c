@@ -3,52 +3,52 @@
 #include <string.h>
 #include "MemoryStream.h"
 
-void* MemoryStreamWrite(MemoryStream this, char* data_addr, int data_len)
+int MemoryStreamWrite(MemoryStream this, char* data_addr, int data_len)
 {
     int i = 0;
+    int Capacity = MIN(data_len, this->Length - this->InPos + this->OutPos);
+    int Left     = MIN(Capacity, this->Length - (this->InPos & (this->Length -1)));
 
-    if ((data_addr == NULL) || (data_len > (this->Capacity - this->Position)))
-        return NULL;
+    memcpy(this->Memory + (this->InPos & (this->Length -1)), data_addr, Left);
+    memcpy(this->Memory, data_addr + Left, Capacity - Left);
 
-    if (data_len < 8)
-        for (i = 0; i < data_len; i++)
-            *(this->Memory + this->Position + i) = *(data_addr + i);
-    else
-        memcpy(this->Memory + this->Position, data_addr, data_len);
+    this->InPos += Capacity;
 
-    this->Length += data_len;
-    this->Position += data_len;
-
-    return 0;
+    return Capacity;
 }
 
-void* MemoryStreamRead(MemoryStream this, char* data_addr, int data_len)
+int MemoryStreamRead(MemoryStream this, char* data_addr, int data_len)
 {
-    if ((data_addr == NULL) || (data_len > (this->Length)))
-        return NULL;
+    int Capacity = MIN(data_len, this->InPos - this->OutPos);
+    int Left     = MIN(Capacity, this->Length - (this->OutPos & (this->Length - 1)));
 
-    memcpy(data_addr, this->Memory + this->Position - data_len, data_len);
+    memcpy(data_addr, this->Memory + (this->OutPos & (this->Length - 1)), Left);
+    memcpy(data_addr + Left, this->Memory, Capacity - Left);
 
-    this->Length -= data_len;
-    this->Position -= data_len;
-
-    return 0;
+    return Capacity;
 }
 
 MemoryStream MemoryStreamAlloc(int size)
 {
     MemoryStream ms = calloc(1, sizeof(MemoryStream_T));
 
-    ms->Memory = malloc(size);
-    memset(ms->Memory, 0x0, size);
+    ms->Length = size;
 
-    ms->this = ms;
-    ms->Capacity = size;
-    ms->Length   = 0;
-    ms->Position = 0;
+    if (!is_power_of_2(size))
+    {
+        while(!is_power_of_2(ms->Length))
+            ms->Length++;
+    }
 
-    ms->Write = MemoryStreamWrite;
-    ms->Read = MemoryStreamRead;
+    ms->Memory = malloc(ms->Length);
+    memset(ms->Memory, 0x0, ms->Length);
+
+    ms->this   = ms;
+    ms->InPos  = 0;
+    ms->OutPos = 0;
+
+    ms->Write  = MemoryStreamWrite;
+    ms->Read   = MemoryStreamRead;
 
     return ms;
 }
@@ -63,7 +63,7 @@ MemoryByteArray* MemoryStreamAddByteArray(MemoryStream ms, char* data_addr, int 
 
     STAILQ_INSERT_TAIL(&ms->head, insert, nodes);
     ms->Length += data_len;
-    ms->Position += data_len;
+    ms->Count  += 1;
 
     return insert;
 }
@@ -77,7 +77,7 @@ void MemoryStreamDelByteArray(MemoryStream ms, MemoryByteArray* array)
         return;
 
     ms->Length -= array->size;
-    ms->Position -= array->size;
+    ms->Count  -= 1;
 
     STAILQ_REMOVE(&ms->head, array, MemoryBytes, nodes);
 
@@ -106,7 +106,7 @@ void MemoryStreamEmptyByteArray(MemoryStream ms)
     }
 
     ms->Length = 0;
-    ms->Position = 0;
+    ms->Count  = 0;
 }
 
 MemoryStream MemoryStreamCreate(void)
@@ -115,9 +115,8 @@ MemoryStream MemoryStreamCreate(void)
     STAILQ_INIT(&ms->head);
 
     ms->this     = ms;
-    ms->Capacity = -1;
+    ms->Count    = 0;
     ms->Length   = 0;
-    ms->Position = 0;
 
     ms->AddByteArray    = MemoryStreamAddByteArray;
     ms->DeleteByteArray = MemoryStreamDelByteArray;

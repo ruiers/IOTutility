@@ -2,6 +2,9 @@
 #define __INC_LINUX_MEMORYSTREAM__
 #include <sys/queue.h>
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define is_power_of_2(x)	((x) != 0 && (((x) & ((x) - 1)) == 0))
+
 STAILQ_HEAD(memory_list_head, MemoryBytes);
 
 struct MemoryBytes
@@ -19,12 +22,13 @@ typedef struct MemoryStream_Head
     struct memory_list_head head;
 
     char*  Memory;
-    int    Capacity;
+    int    Count;
     int    Length;
-    int    Position;
+    int    InPos;
+    int    OutPos;
 
-    void* (*Write) (struct MemoryStream_Head* this, char* data_addr, int data_len);
-    void* (*Read)  (struct MemoryStream_Head* this, char* data_addr, int data_len);
+    int (*Write) (struct MemoryStream_Head* this, char* data_addr, int data_len);
+    int (*Read)  (struct MemoryStream_Head* this, char* data_addr, int data_len);
 
     MemoryByteArray* (*AddByteArray)  (struct MemoryStream_Head* this, char* data_addr, int data_len);
     void (*DeleteByteArray) (struct MemoryStream_Head* this, MemoryByteArray* array);

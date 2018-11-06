@@ -40,11 +40,19 @@
 
 enum
 {
-    STA_CREATED = 0x1,
+    STA_CREATED = 0x0,
+    STA_CONNECTING,
     STA_CONNECTED,
-    STA_WAITING_ACK,
     STA_CONNECT_NO_ACK,
+    STA_PUBLISHING,
+    STA_PUBLISHED,
     STA_PUBLISH_NO_ACK,
+    STA_SUBSCRIBING,
+    STA_SUBSCRIBED,
+    STA_SUBSCRIBE_NO_ACK,
+    STA_PINGREQING,
+    STA_PINGREQED,
+    STA_PINGREQ_NO_ACK,
 } MQTT_Status;
 
 typedef struct FixedHeader
@@ -77,8 +85,9 @@ typedef struct ACK_Code
 
 typedef struct mqtt_control_packet
 {
-    int              PacketType;
+    unsigned char    PacketType;
     int              PacketLength;
+    int              RemainLength;
     int              PayloadLength;
     char*            PacketData;
 
@@ -102,10 +111,25 @@ typedef struct mqtt_control_session
     int (*Fetch)      (struct mqtt_control_session* this, MemoryStream topic_and_message);
 } MQTT_Session;
 
+int encode_integer_to_length(unsigned char* remaining_length, int value);
+int decode_length_to_interger(unsigned char* remaining_length, int *value);
 MQTT_ControlPacket* MQTT_ControlPacketCreate(int PacketType);
 char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this);
 int MQTT_ControlPacketSetTopic(MQTT_ControlPacket* this, char* topic_string, int topic_length);
 int MQTT_ControlPacketSetMessage(MQTT_ControlPacket* this, char* msg_string, int msg_length);
-
+int MQTT_SessionPublish(MQTT_Session* this, char* topic, char* message, int length);
+char* MQTT_ControlPacketGetPacketData(MQTT_ControlPacket* this);
 MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum);
+
+typedef struct _mqtt_control_server_
+{
+    int   numSession;
+    TcpListener* listener;
+
+    MQTT_Session*   (*WaitForSession) (struct _mqtt_control_server_ *this);
+    MQTT_ControlPacket*  (*ACKForSession) (struct _mqtt_control_server_ *this, MQTT_Session* session);
+} MQTT_Server;
+
+MQTT_Server* MQTT_ServerCreate(char* ipStr, int portNum);
+
 #endif

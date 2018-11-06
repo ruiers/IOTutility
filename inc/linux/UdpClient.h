@@ -14,7 +14,7 @@ typedef struct UdpClient_T
     void (*Connect) (struct UdpClient_T* this, char* ipStr, int portNum);
     void (*Send)    (struct UdpClient_T* this, char* data_addr, int data_len);
     void (*Sendto)  (struct UdpClient_T* this, char* data_addr, int data_len, char* ipStr, int portNum);
-    int  (*Receive) (struct UdpClient_T* this, char* data_addr);
+    int  (*Receive) (struct UdpClient_T* this, char* data_addr, int data_len);
 } UdpClient;
 
 UdpClient* udpClientCreate(int portNum);

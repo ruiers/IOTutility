@@ -5,8 +5,9 @@
 #include <string.h>
 #include <netinet/in.h>
 #include "mqttClass.h"
+#include "TcpClass.h"
 
-int client_id_generate(char* client_id, const char *id_base)
+int client_id_generate(unsigned char* client_id, const char *id_base)
 {
     int len;
     char hostname[256];
@@ -38,9 +39,9 @@ int client_id_generate(char* client_id, const char *id_base)
     return strlen(client_id);
 }
 
-int encode_integer_to_length(char* remaining_length, int value)
+int encode_integer_to_length(unsigned char* remaining_length, int value)
 {
-    char std_bytes[4];
+    unsigned char std_bytes[4];
     int  bytes_total = 0, X = value, encodedByte = 0;
 
     memset(std_bytes, 0, sizeof(std_bytes));
@@ -60,10 +61,12 @@ int encode_integer_to_length(char* remaining_length, int value)
     return (bytes_total);
 }
 
-int decode_length_to_interger(char* remaining_length, int *value)
+int decode_length_to_interger(unsigned char* remaining_length, int *value)
 {
-    char encodedByte;
+    unsigned char encodedByte;
     int  bytes_total = 0, multiplier = 1;
+
+    *value = 0;
 
     do
     {
@@ -72,12 +75,10 @@ int decode_length_to_interger(char* remaining_length, int *value)
         multiplier *= 128;
         if ( multiplier > 128*128*128 )
             return -1;
-
-        remaining_length[bytes_total++] = encodedByte;
     }
     while ( (encodedByte & 128) != 0 );
 
-    return (bytes_total - 1);
+    return bytes_total;
 }
 
 int setTcpClientTimeout(int sock_fd, int ns_timeout)
@@ -190,16 +191,18 @@ int MQTT_SessionConnect(MQTT_Session* this)
     MQTT_ControlPacket*  mqttConnect = MQTT_ControlPacketCreate(CONNECT);
     MQTT_ACKPacket       mqttACK;
 
-    this->Status = STA_WAITING_ACK;
+    this->Status = STA_CONNECTING;
     MQTT_ControlPacketGetPacketData(mqttConnect);
     setTcpClientTimeout(this->Session->Client, 60);
     this->Session->Send(this->Session, mqttConnect->PacketData, mqttConnect->PacketLength);
+    /*
     this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
 
     if ((mqttACK.type_and_flag == CONNACK) && (mqttACK.ack_code[1] == CONNACK_ACCEPTED))
         this->Status = STA_CONNECTED;
     else
         this->Status = STA_CONNECT_NO_ACK;
+    */
 }
 
 int MQTT_SessionDisonnect(MQTT_Session* this)
@@ -220,21 +223,16 @@ int MQTT_SessionPublish(MQTT_Session* this, char* topic, char* message, int leng
     if (this->Status != STA_CONNECTED)
         return -1;
 
-    this->Status = STA_WAITING_ACK;
+    this->Status = STA_PUBLISHING;
     MQTT_ControlPacketSetTopic(mqttPublish, topic, strlen(topic));
     MQTT_ControlPacketSetMessage(mqttPublish, message, length);
     MQTT_ControlPacketGetPacketData(mqttPublish);
     mqttStatus = this->Session->Send(this->Session, mqttPublish->PacketData, mqttPublish->PacketLength);
 
-    if (mqttStatus == -1)
+    if (mqttStatus == mqttPublish->PacketLength)
     {
-        this->Disconnect(this);
-        this->Connect(this);
-        this->Session->Send(this->Session, mqttPublish->PacketData, mqttPublish->PacketLength);
+        this->Status = STA_CONNECTED;
     }
-    // this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
-    // FixMe I do not know why it is blocked here.
-    this->Status = STA_CONNECTED;
 }
 
 int MQTT_SessionSubscribe(MQTT_Session* this, char* topic)
@@ -248,7 +246,7 @@ int MQTT_SessionSubscribe(MQTT_Session* this, char* topic)
     if (this->Status != STA_CONNECTED)
         return -1;
 
-    this->Status = STA_WAITING_ACK;
+    this->Status = STA_SUBSCRIBING;
     *(mqttSubscribe->FixedHeader->addr) |= 0x02;
     MQTT_ControlPacketSetMessage(mqttSubscribe, (char *) &message_identifier, sizeof(short));
     MQTT_ControlPacketSetMessage(mqttSubscribe, (char *) &topic_len, sizeof(short));
@@ -269,62 +267,99 @@ int MQTT_SessionPingReq(MQTT_Session* this)
     if (this->Status != STA_CONNECTED)
         return -1;
 
-    this->Status = STA_WAITING_ACK;
+    this->Status = STA_PINGREQING;
 
     MQTT_ControlPacketGetPacketData(mqttPingReq);
     this->Session->Send(this->Session, mqttPingReq->PacketData, mqttPingReq->PacketLength);
+    /*
     this->Session->Receive(this->Session, (char *) &mqttACK, sizeof(MQTT_ACKPacket));
 
     if (mqttACK.type_and_flag == PINGRESP)
         this->Status = STA_CONNECTED;
     else
         this->Status = STA_WAITING_ACK;
+    */
+}
+
+int MQTT_SessionHandleCommand(unsigned char *cmd_data, int cmd_data_len, MemoryStream topMsg)
+{
+    int total_len = cmd_data_len, remain_len = 0, remain_len_bytes = 0;
+    int topic_len = 0, message_len = 0;
+    MQTT_ACKPacket *ackPacket = (MQTT_ACKPacket *) cmd_data;
+    MemoryByteArray* topic = NULL, *message = NULL;
+
+    switch ( ackPacket->type_and_flag & 0xF0)
+    {
+    case PUBACK:
+        break;
+    case CONNACK:
+        if (ackPacket->ack_code[1] == CONNACK_ACCEPTED)
+            return STA_CONNECTED;
+        break;
+    case PINGRESP:
+        break;
+    case PUBLISH:
+        remain_len_bytes = decode_length_to_interger(cmd_data + 1, &remain_len);
+        topic_len = htons(*((unsigned short *) (cmd_data + 1 + remain_len_bytes)));
+        message_len = total_len - (1 + remain_len_bytes + 2 + topic_len);
+
+        topic = topMsg->AddByteArray(topMsg, cmd_data + 1 + remain_len_bytes + 2, topic_len);
+        message = topMsg->AddByteArray(topMsg, cmd_data + total_len - message_len, message_len);
+        break;
+    default:
+        return STA_CREATED;
+    }
+
+    return STA_CONNECTED;
 }
 
 int MQTT_SessionFetch(MQTT_Session* this, MemoryStream topMsg)
 {
-    char *tcp_data;
-    int total_len = 0, remain_len = 0, remain_len_bytes = 0, i = 0;
-    int topic_len = 0, message_len = 0;
-    int tcp_status = 0;
-    MemoryByteArray* topic = NULL, *message = NULL;
+    unsigned char tcp_data[1024];
+    int           tcp_data_len = 0;
+    int           cmd_data_len = 0;
+    int           cmd_data_offset = 0;
 
-    tcp_data = calloc(1, 5);
-    this->Session->Receive(this->Session, tcp_data, 5);
-    remain_len_bytes = decode_length_to_interger(tcp_data + 1, &remain_len);
-
-    total_len = remain_len + remain_len_bytes + 1;
-    tcp_data = realloc(tcp_data, total_len);
-    tcp_status = this->Session->Receive(this->Session, tcp_data + 5, total_len - 5);
-
-    if (tcp_status == -1)
-    {
-        MQTT_SessionPingReq(this);
-    }
-
-    topic_len = tcp_data[1+remain_len_bytes + 1];
-    message_len = total_len - (1 + remain_len_bytes + 2 + topic_len);
-
-    if ( (total_len < 0) || (topic_len < 0) || (message_len < 0) )
-    {
-        //printf("total len:%d topic len:%d message len:%d\n", total_len, topic_len, message_len);
-        free(tcp_data);
+    if (this->Status == -1)
         return -1;
-    }
 
-    if (tcp_data[0] == 0x30)
+    tcp_data_len = this->Session->Receive(this->Session, tcp_data, sizeof(tcp_data));
+
+    if (tcp_data_len < 0)
     {
-        if ( (topic_len + message_len + 1 + 2 + remain_len_bytes) > total_len )
-        {
-            printf("length error\n");
-            free(tcp_data);
-            return -1;
-        }
-        topic = topMsg->AddByteArray(topMsg, tcp_data + 1 + remain_len_bytes + 2, topic_len);
-        message = topMsg->AddByteArray(topMsg, tcp_data + total_len - message_len, message_len);
+        // Force reconnect
+        this->Session->Connected = 1;
+        MQTT_SessionPingReq(this);
+
+        return 0;
     }
 
-    free(tcp_data);
+    while(tcp_data_len > 0)
+    {
+        switch(tcp_data[cmd_data_offset] & 0xF0)
+        {
+        case CONNACK:
+        case PUBACK:
+        case PINGRESP:
+            cmd_data_len = 4;
+            break;
+        case PUBLISH:
+            cmd_data_len += decode_length_to_interger(tcp_data + cmd_data_offset + 1, &cmd_data_len) + 1;
+            break;
+        default:
+            break;
+        }
+
+        if (cmd_data_len < 4)
+        {
+            break;
+        }
+
+        this->Status = MQTT_SessionHandleCommand(tcp_data + cmd_data_offset, cmd_data_len, topMsg);
+        tcp_data_len -= cmd_data_len;
+        cmd_data_offset += cmd_data_len;
+        cmd_data_len = 0;
+    }
 }
 
 MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum)
@@ -344,4 +379,115 @@ MQTT_Session* MQTT_SessionCreate(char* ipStr, int portNum)
     session->Status     = STA_CREATED;
 
     return session;
+}
+
+MQTT_Session* MQTT_ServerWaitForSession(MQTT_Server* this)
+{
+    MQTT_Session* session = calloc(1, sizeof(MQTT_Session));
+
+    session->Session = this->listener->AcceptTcpClient(this->listener);
+
+    return session;
+}
+
+MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* session)
+{
+    char data[1500];
+    MQTT_ControlPacket* Packet = calloc(1, sizeof(MQTT_ControlPacket));
+    MQTT_ACKPacket ack;
+    int size_of_ack, size_of_fixheader, size_of_x, offset;
+
+    Packet->PacketLength = session->Session->Receive(session->Session, data, sizeof(data));
+
+    if (Packet->PacketLength < 0)
+        return NULL;
+
+    Packet->ControlPacket = MemoryStreamCreate();
+    Packet->PacketType = *(data) & 0xF0;
+    size_of_fixheader  = 1 + decode_length_to_interger(data + 1, &Packet->RemainLength);
+
+    if (size_of_fixheader > Packet->PacketLength)
+        return NULL;
+
+    Packet->FixedHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data, size_of_fixheader);
+    offset = size_of_fixheader;
+    Packet->ControlPacket->Memory = malloc(Packet->PacketLength);
+    memcpy(Packet->ControlPacket->Memory, data, Packet->PacketLength);
+
+    switch (Packet->PacketType)
+    {
+    case PINGREQ:
+        ack.type_and_flag = PINGRESP;
+        ack.remaining_length = 0;
+        size_of_ack = 2;
+        break;
+    case CONNECT:
+        ack.type_and_flag = CONNACK;
+        ack.remaining_length = 2;
+        ack.ack_code[1] = CONNACK_ACCEPTED;
+        this->numSession++;
+        size_of_ack = sizeof(ack);
+        break;
+    case DISCONNECT:
+        ack.type_and_flag = DISCONNECT;
+        ack.remaining_length = 2;
+        this->numSession--;
+        size_of_ack = sizeof(ack);
+        break;
+    case PUBLISH:
+        size_of_x = sizeof(short) + htons(*((short *)(data + Packet->FixedHeader->size)));
+
+        if ((size_of_x + offset) > Packet->PacketLength)
+            return NULL;
+
+        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + offset, size_of_x);
+        offset += size_of_x;
+
+        size_of_x = Packet->RemainLength - Packet->VariableHeader->size;
+
+        if ((size_of_x + offset) > Packet->PacketLength)
+            return  NULL;
+
+        Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + offset, size_of_x);
+        ack.type_and_flag = PUBACK;
+        size_of_ack = sizeof(ack);
+        break;
+    case SUBSCRIBE:
+        size_of_x = sizeof(short) + htons(*((short *)(data + Packet->FixedHeader->size)));
+
+        if ((size_of_x + offset) > Packet->PacketLength)
+            return NULL;
+
+        Packet->VariableHeader = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + offset, size_of_x);
+        offset += size_of_x;
+
+        if ((size_of_x + offset) > Packet->PacketLength)
+            return  NULL;
+
+        size_of_x = Packet->RemainLength - Packet->VariableHeader->size;
+
+        Packet->PayloadStart = Packet->ControlPacket->AddByteArray(Packet->ControlPacket, data + offset, size_of_x);
+        ack.type_and_flag = SUBACK;
+        size_of_ack = sizeof(ack);
+        break;
+    }
+
+    if( size_of_ack == session->Session->Send(session->Session, (char *) &ack, size_of_ack))
+        return Packet;
+    else
+        return NULL;
+}
+
+MQTT_Server* MQTT_ServerCreate(char* ipStr, int portNum)
+{
+    MQTT_Server* server = calloc(1, sizeof(MQTT_Server));
+
+    server->WaitForSession = MQTT_ServerWaitForSession;
+    server->ACKForSession  = MQTT_ServerACKForSession;
+    server->listener   = tcpListenerCreate(ipStr, portNum);
+    server->numSession = 0;
+
+    server->listener->Start(server->listener);
+
+    return server;
 }
