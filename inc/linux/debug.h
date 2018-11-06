@@ -11,7 +11,7 @@
 
 int log_buf(const char *format, ...);
 void hexdump(char* data, int len) ;
-void init_log_to_file(char* name);
+int init_log_to_file(char* name);
 void init_log_to_net(char* host, int port);
 
 #define log_time() \

@@ -21,7 +21,7 @@ FILE *log_steam_ntcp = NULL;
 char log_type = LOCAL_CON;
 TcpClient* log_net = NULL;
 
-void init_log_to_file(char* name)
+int init_log_to_file(char* name)
 {
     int file_fd = 0;
 
@@ -36,7 +36,19 @@ void init_log_to_file(char* name)
     else
     {
         close(file_fd);
+        file_fd = 0;
     }
+
+    return file_fd;
+}
+
+void free_log_to_file(int fd)
+{
+    if (fd > 0)
+        close(fd);
+
+    log_type &= ~LOCAL_FILE;
+    log_steam_file = NULL;
 }
 
 void init_log_to_net(char* host, int port)
@@ -46,10 +58,24 @@ void init_log_to_net(char* host, int port)
     if (log_net == NULL)
         return;
 
+    if (log_net->Connected == 0)
+        return;
+
     log_steam_ntcp = fdopen(dup(log_net->Client), "w");
     setlinebuf(log_steam_ntcp);
 
     log_type |= NET_TCP;
+}
+
+void free_log_to_net()
+{
+    if ((log_net) && (log_net->Client > 0))
+        log_net->Disconnect(log_net);
+
+    log_type &= ~NET_TCP;
+    log_steam_ntcp = NULL;
+    free(log_net);
+    log_net = NULL;
 }
 
 int log_buf(const char *format, ...)
