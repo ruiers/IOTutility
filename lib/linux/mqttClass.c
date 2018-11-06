@@ -472,7 +472,7 @@ MQTT_ControlPacket* MQTT_ServerACKForSession(MQTT_Server* this, MQTT_Session* se
         break;
     }
 
-    if( sizeof(ack) == session->Session->Send(session->Session, (char *) &ack, size_of_ack))
+    if( size_of_ack == session->Session->Send(session->Session, (char *) &ack, size_of_ack))
         return Packet;
     else
         return NULL;
