@@ -20,9 +20,9 @@ void* fetchingWork(void* arg)
         if ( topic_and_message->Length > 0 )
         {
             topic_or_message = topic_and_message->GetByteArray(topic_and_message);
-            printf("topic   %4d:%s\n", topic_or_message->size, topic_or_message->addr);
+            log_ver("topic   %4d:%s", topic_or_message->size, topic_or_message->addr);
             topic_or_message = topic_and_message->NextByteArray(topic_or_message);
-            printf("message %4d:%s\n", topic_or_message->size, topic_or_message->addr);
+            log_ver("message %4d:%s", topic_or_message->size, topic_or_message->addr);
             topic_and_message->EmptyByteArray(topic_and_message);
         }
     }
@@ -63,6 +63,10 @@ void main(int argc, char** argv)
 
     Session = MQTT_SessionCreate(hostIPaddr, hostPortNumber);
     Session->Connect(Session);
+
+    //log_to_ether_ntcp("127.0.0.1", 1889);
+    log_to_local_file("/dev/stdout");
+    log_to_local_file("mqtt_client.log");
     taskCreate(fetchingWork, Session);
 
     while (keep_going)
