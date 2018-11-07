@@ -74,7 +74,11 @@ void main(int argc, char** argv)
         keep_going = getchar();
 
         if (keep_going == 'z')
+        {
+            log_to_none();
+            Session->Disconnect(Session);
             break;
+        }
 
         if (keep_going == 's')
         {
@@ -85,7 +89,6 @@ void main(int argc, char** argv)
         {
             Session->Publish(Session, topic_string, message_string, strlen(message_string));
         }
-
     }
 
     Session->Disconnect(Session);
