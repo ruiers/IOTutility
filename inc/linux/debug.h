@@ -9,10 +9,27 @@
 #include <sys/time.h>
 #include <time.h>
 
+#define MAX_LOG_DEV_NUM 10
+
+enum
+{
+    LOCAL_FILE = 1 << 0,
+    ETHER_NTCP = 1 << 1,
+    ETHER_NUDP = 1 << 2
+};
+
+typedef struct _log_dev_
+{
+    FILE* log_steam;
+    int   log_fd;
+    char  log_type;
+    void* netClient;
+} log_dev;
+
 int log_buf(const char *format, ...);
 void hexdump(char* data, int len) ;
-int init_log_to_file(char* name);
-void init_log_to_net(char* host, int port);
+void log_to_local_file(char* name);
+void log_to_ether_ntcp(char* host, int port);
 
 #define log_time() \
 	{ \

@@ -6,109 +6,113 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include "TcpClass.h"
+#include "UdpClient.h"
 #include "debug.h"
 
-enum log_type
+static log_dev* log_devs[MAX_LOG_DEV_NUM];
+static int      log_num = 0;
+
+void log_to_local_file(char* name)
 {
-    LOCAL_CON  = 1 << 0,
-    LOCAL_FILE = 1 << 1,
-    NET_UDP    = 1 << 2,
-    NET_TCP    = 1 << 3
-};
+    int file_fd = open(name,   O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
+    FILE* filp = NULL;
+    int index = log_num;
 
-FILE *log_steam_file = NULL;
-FILE *log_steam_ntcp = NULL;
-char log_type = LOCAL_CON;
-TcpClient* log_net = NULL;
-
-int init_log_to_file(char* name)
-{
-    int file_fd = 0;
-
-    file_fd = open(name,   O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
+    if (index >= MAX_LOG_DEV_NUM)
+    {
+        return;
+    }
 
     if (file_fd > 2)
     {
-        log_steam_file = fdopen(dup(file_fd), "w");
-        setlinebuf(log_steam_file);
-        log_type |= LOCAL_FILE;
+        filp = fdopen(dup(file_fd), "w");
+
+        if (filp == NULL)
+        {
+            close(file_fd);
+            return;
+        }
+        setlinebuf(filp);
+        log_devs[index] = (log_dev *)malloc(sizeof(log_dev));
+        log_devs[index]->log_steam = filp;
+        log_devs[index]->log_fd    = file_fd;
+        log_devs[index]->log_type  = LOCAL_FILE;
+        log_num++;
     }
     else
     {
         close(file_fd);
-        file_fd = 0;
+    }
+}
+
+void log_to_ether_ntcp(char* host, int port)
+{
+    TcpClient* tcpClient = tcpClientCreate(host, port);
+    FILE* filp = NULL;
+    int index = log_num;
+
+    if (index >= MAX_LOG_DEV_NUM)
+    {
+        return;
     }
 
-    return file_fd;
-}
-
-void free_log_to_file(int fd)
-{
-    if (fd > 0)
-        close(fd);
-
-    log_type &= ~LOCAL_FILE;
-    log_steam_file = NULL;
-}
-
-void init_log_to_net(char* host, int port)
-{
-    log_net = tcpClientCreate(host, port);
-
-    if (log_net == NULL)
+    if (tcpClient == NULL)
         return;
 
-    if (log_net->Connected == 0)
+    if (tcpClient->Connected == 0)
         return;
 
-    log_steam_ntcp = fdopen(dup(log_net->Client), "w");
-    setlinebuf(log_steam_ntcp);
-
-    log_type |= NET_TCP;
+    filp = fdopen(dup(tcpClient->Client), "w");
+    setlinebuf(filp);
+    log_devs[index] = (log_dev *)malloc(sizeof(log_dev));
+    log_devs[index]->netClient = tcpClient;
+    log_devs[index]->log_steam = filp;
+    log_devs[index]->log_fd   = tcpClient->Client;
+    log_devs[index]->log_type = ETHER_NTCP;
+    log_num++;
 }
 
-void free_log_to_net()
+void log_to_ether_nudp(char* host, int port)
 {
-    if ((log_net) && (log_net->Client > 0))
-        log_net->Disconnect(log_net);
+    UdpClient* udpClient = udpClientCreate(1887);
+    FILE* filp = NULL;
+    int index = log_num;
 
-    log_type &= ~NET_TCP;
-    log_steam_ntcp = NULL;
-    free(log_net);
-    log_net = NULL;
+    if (index >= MAX_LOG_DEV_NUM)
+    {
+        return;
+    }
+
+    if (udpClient == NULL)
+        return;
+    else
+        udpClient->Connect(udpClient, host, port);
+
+    filp = fdopen(dup(udpClient->Client), "w");
+    setlinebuf(filp);
+    log_devs[index] = (log_dev *)malloc(sizeof(log_dev));
+    log_devs[index]->netClient = udpClient;
+    log_devs[index]->log_steam = filp;
+    log_devs[index]->log_fd   = udpClient->Client;
+    log_devs[index]->log_type = ETHER_NUDP;
+    log_num++;
 }
 
 int log_buf(const char *format, ...)
 {
     va_list arg, *logarg;
-    int done;
+    int done, index;
 
     logarg = (va_list *) malloc(sizeof(va_list));
 
     va_start (arg, format);
 
-    if (log_type & LOCAL_CON)
+    for (index = 0; index < log_num; index++)
     {
         memcpy(logarg, &arg, sizeof(arg));
-        done = vfprintf (stdout, format, *logarg);
-    }
 
-    if (log_type & LOCAL_FILE)
-    {
-        if (log_steam_file != NULL)
-        {
-            memcpy(logarg, &arg, sizeof(arg));
-            done = vfprintf (log_steam_file, format, *logarg);
-        }
-    }
-
-    if (log_type & NET_TCP)
-    {
-        if (log_net && log_steam_ntcp)
-        {
-            memcpy(logarg, &arg, sizeof(arg));
-            done = vfprintf (log_steam_ntcp, format, *logarg);
-        }
+        if (log_devs[log_num]->log_steam);
+        done = vfprintf (log_devs[index]->log_steam, format, *logarg);
     }
 
     va_end (arg);
