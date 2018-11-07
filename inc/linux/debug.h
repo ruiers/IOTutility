@@ -13,6 +13,7 @@
 
 enum
 {
+    LOCAL_NONE = 0 << 0,
     LOCAL_FILE = 1 << 0,
     ETHER_NTCP = 1 << 1,
     ETHER_NUDP = 1 << 2
@@ -28,6 +29,7 @@ typedef struct _log_dev_
 
 int log_buf(const char *format, ...);
 void hexdump(char* data, int len) ;
+void log_to_none();
 void log_to_local_file(char* name);
 void log_to_ether_ntcp(char* host, int port);
 

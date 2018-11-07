@@ -12,6 +12,33 @@
 static log_dev* log_devs[MAX_LOG_DEV_NUM];
 static int      log_num = 0;
 
+void log_to_none()
+{
+    int index = 0;
+
+    for (index = 0; index < log_num; index++)
+    {
+        if (log_devs[index]->log_type == LOCAL_FILE)
+        {
+            close(log_devs[index]->log_fd);
+        }
+        else if (log_devs[index]->log_type == ETHER_NTCP)
+        {
+            TcpClient* tcpClient = (TcpClient *) log_devs[index]->netClient;
+            tcpClient->Disconnect(tcpClient);
+        }
+
+        log_devs[index]->log_fd    = 0;
+        log_devs[index]->log_steam = NULL;
+        log_devs[index]->log_type  = LOCAL_NONE;
+        log_devs[index]->netClient = NULL;
+        free(log_devs[index]);
+        log_devs[index] = NULL;
+    }
+
+    log_num = 0;
+}
+
 void log_to_local_file(char* name)
 {
     int file_fd = open(name,   O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
