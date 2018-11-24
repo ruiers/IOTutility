@@ -127,24 +127,20 @@ void log_to_ether_nudp(char* host, int port)
 
 int log_buf(const char *format, ...)
 {
-    va_list arg, *logarg;
+    va_list arg, arg_l;
     int done, index;
-
-    logarg = (va_list *) malloc(sizeof(va_list));
 
     va_start (arg, format);
 
     for (index = 0; index < log_num; index++)
     {
-        memcpy(logarg, &arg, sizeof(arg));
+        memcpy(&arg_l, &arg, sizeof(va_list));
 
         if (log_devs[log_num]->log_steam);
-        done = vfprintf (log_devs[index]->log_steam, format, *logarg);
+        done = vfprintf (log_devs[index]->log_steam, format, arg_l);
     }
 
     va_end (arg);
-
-    free(logarg);
 
     return done;
 }
