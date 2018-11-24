@@ -136,8 +136,8 @@ int log_buf(const char *format, ...)
     {
         memcpy(&arg_l, &arg, sizeof(va_list));
 
-        if (log_devs[log_num]->log_steam);
-        done = vfprintf (log_devs[index]->log_steam, format, arg_l);
+        if (log_devs[index]->log_steam)
+            done = vfprintf (log_devs[index]->log_steam, format, arg_l);
     }
 
     va_end (arg);
