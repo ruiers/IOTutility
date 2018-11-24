@@ -41,7 +41,7 @@ void log_to_none()
 
 void log_to_local_file(char* name)
 {
-    int file_fd = open(name,   O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
+    int file_fd = open(name,   O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     FILE* filp = NULL;
     int index = log_num;
 
@@ -127,20 +127,18 @@ void log_to_ether_nudp(char* host, int port)
 
 int log_buf(const char *format, ...)
 {
-    va_list arg, arg_l;
+    va_list arg;
     int done, index;
-
-    va_start (arg, format);
 
     for (index = 0; index < log_num; index++)
     {
-        memcpy(&arg_l, &arg, sizeof(va_list));
+        va_start (arg, format);
 
         if (log_devs[index]->log_steam)
-            done = vfprintf (log_devs[index]->log_steam, format, arg_l);
-    }
+            done = vfprintf (log_devs[index]->log_steam, format, arg);
 
-    va_end (arg);
+        va_end (arg);
+    }
 
     return done;
 }
