@@ -487,7 +487,13 @@ MQTT_Server* MQTT_ServerCreate(char* ipStr, int portNum)
     server->listener   = tcpListenerCreate(ipStr, portNum);
     server->numSession = 0;
 
-    server->listener->Start(server->listener);
+    if (server->listener != NULL)
+        server->listener->Start(server->listener);
+    else
+    {
+        free(server);
+        server = NULL;
+    }
 
     return server;
 }
