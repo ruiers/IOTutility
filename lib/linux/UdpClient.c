@@ -71,7 +71,7 @@ int udpClientReceive(UdpClient* this, char* data_addr, int data_len)
 
     if (ret > 0)
     {
-        this->destAddr.sin_addr   = this->servAddr.sin_addr;
+        memcpy(&this->destAddr, &this->servAddr, sizeof(struct sockaddr_in));
         this->Active = 1;
     }
 
