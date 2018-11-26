@@ -30,6 +30,9 @@ OBJ_MQTT_SERVER = app/mqtt_server.o
 BIN_MPC8377 = mpc8377.bin
 OBJ_MPC8377 = app/mpc8377_network_simulator.o
 
+BIN_NETCAT = netcat.bin
+OBJ_NETCAT = app/netcat.o
+
 all: clean $(LIB_UTILITY) $(APP_OBJS) 
 
 $(LIB_UTILITY): $(LIB_OBJS)
@@ -46,6 +49,9 @@ $(BIN_MQTT_SERVER): $(LIB_UTILITY) $(APP_OBJS)
 
 $(BIN_MPC8377): $(LIB_UTILITY) $(APP_OBJS)
 	$(CC) -o $(BIN_MPC8377) $(OBJ_MPC8377) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
+
+$(BIN_NETCAT): $(LIB_UTILITY) $(APP_OBJS)
+	$(CC) -o $(BIN_NETCAT) $(OBJ_NETCAT) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
 
 clean:
 	-rm -f $(shell find . -name "*.[o]")
