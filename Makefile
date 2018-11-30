@@ -18,22 +18,11 @@ LIB_OBJS = $(addsuffix .o, $(basename $(LIB_SRCS)))
 
 APP_SRCS = $(foreach d, app, $(wildcard $(addprefix $(d)/*, .c)))
 APP_OBJS = $(addsuffix .o, $(basename $(APP_SRCS)))
+APPS = $(basename $(APP_SRCS))
 
 LIB_UTILITY = libutility.so
 
-BIN_MQTT_CLIENT = mqtt_client.bin
-OBJ_MQTT_CLIENT = app/mqtt_client.o
-
-BIN_MQTT_SERVER = mqtt_server.bin
-OBJ_MQTT_SERVER = app/mqtt_server.o
-
-BIN_MPC8377 = mpc8377.bin
-OBJ_MPC8377 = app/mpc8377_network_simulator.o
-
-BIN_NETCAT = netcat.bin
-OBJ_NETCAT = app/netcat.o
-
-all: clean $(LIB_UTILITY) $(APP_OBJS) 
+all: clean $(LIB_UTILITY) $(APP_OBJ)
 
 $(LIB_UTILITY): $(LIB_OBJS)
 	$(CC) -o $(LIB_UTILITY) $(LIB_OBJS) $(CFLAGS) -fPIC -shared -lpthread
@@ -41,17 +30,11 @@ $(LIB_UTILITY): $(LIB_OBJS)
 $(APP_OBJ): $(APP_SRC)
 	$(CC) -c $(APP_SRC) $(CFLAGS)
 
-$(BIN_MQTT_CLIENT): $(LIB_UTILITY) $(APP_OBJS)
-	$(CC) -o $(BIN_MQTT_CLIENT) $(OBJ_MQTT_CLIENT) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
-
-$(BIN_MQTT_SERVER): $(LIB_UTILITY) $(APP_OBJS)
-	$(CC) -o $(BIN_MQTT_SERVER) $(OBJ_MQTT_SERVER) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
-
-$(BIN_MPC8377): $(LIB_UTILITY) $(APP_OBJS)
-	$(CC) -o $(BIN_MPC8377) $(OBJ_MPC8377) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
-
-$(BIN_NETCAT): $(LIB_UTILITY) $(APP_OBJS)
-	$(CC) -o $(BIN_NETCAT) $(OBJ_NETCAT) $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=.
+apps: $(APP_OBJS)
+	for app_obj in $(APPS) ; do \
+	app_bin=$$app_obj.bin ; \
+	$(CC) -o $$app_bin $$app_obj.o $(CFLAGS) -lpthread -L./ -lutility -Wl,-rpath=. ; \
+	done
 
 clean:
 	-rm -f $(shell find . -name "*.[o]")
