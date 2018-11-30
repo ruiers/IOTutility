@@ -48,10 +48,14 @@ void udpClientSend(UdpClient* this, char* data_addr, int data_len)
 void udpClientSendto(UdpClient* this, char* data_addr, int data_len, char* ipStr, int portNum)
 {
     struct sockaddr_in addr_dest;
+    int reuse_port = 1;
 
     addr_dest.sin_family      = AF_INET;
     addr_dest.sin_port        = htons(portNum);
     addr_dest.sin_addr.s_addr = inet_addr(ipStr);
+
+
+    setsockopt(this->Client, SOL_SOCKET, SO_REUSEADDR | SO_BROADCAST, &reuse_port, sizeof(int));
 
     if (sendto(this->Client, (caddr_t)data_addr, data_len, 0, (struct sockaddr *)&addr_dest, sizeof(addr_dest)) == -1)
     {
