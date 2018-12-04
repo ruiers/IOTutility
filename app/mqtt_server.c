@@ -363,6 +363,10 @@ void main(int argc, char** argv)
     MQTT_Session *session = NULL;
 
     mqttSrv = MQTT_ServerCreate("127.0.0.1", 1888);
+
+    if (mqttSrv == NULL)
+        return;
+
     mqttSub = (MQTT_Sub *) malloc(sizeof(MQTT_Sub));
 
     mqttSub->next = NULL;
