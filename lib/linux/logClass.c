@@ -129,6 +129,14 @@ int log_buf(const char *format, ...)
 {
     va_list arg;
     int done, index;
+    char default_log_name[256];
+
+    if (log_num == 0)
+    {
+        memset(default_log_name, 0x0, 256);
+        sprintf(default_log_name, "/dev/shm/%d.log", getpid());
+        log_to_local_file(default_log_name);
+    }
 
     for (index = 0; index < log_num; index++)
     {
